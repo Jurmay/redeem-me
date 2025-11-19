@@ -1,12 +1,3 @@
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room
-import os
-import random
-
-app = Flask(__name__)
-app.config["SECRET_KEY"] = "secret!"
-
-# IMPORTANT: force threading so eventlet is not used
 socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
 TABLE_ROOM = "table_main"
@@ -431,4 +422,11 @@ def on_player_action(data):
 
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=port,
+        allow_unsafe_werkzeug=True,  # <- important for Render
+    )
