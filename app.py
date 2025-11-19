@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room
+import os
 import random
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "secret!"
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+# IMPORTANT: force threading so eventlet is not used
+socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
 TABLE_ROOM = "table_main"
 HERO_SEAT = 0
@@ -428,5 +431,6 @@ def on_player_action(data):
 
 
 if __name__ == "__main__":
-    # For local testing: python app.py
-    socketio.run(app, host="0.0.0.0", port=5000)
+    # For local and Render: use PORT env if available
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)

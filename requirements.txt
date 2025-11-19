@@ -1,5 +1,4 @@
-flask==3.0.3
+flask
 flask-socketio==5.3.6
-simple-websocket==0.10.1
-eventlet==0.36.1
-gunicorn==22.0.0
+python-socketio==5.11.2
+python-engineio==4.9.1
