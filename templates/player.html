@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Poker Player</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: radial-gradient(circle at top, #245, #02040a);
+        color: #f4f4f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 18px;
+    }
+    h1 { margin-top: 24px; font-size: 32px; }
+    #top-bar { margin: 14px 0; }
+
+    #join_section {
+        margin: 12px 0;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+    #join_section input {
+        padding: 7px 10px;
+        border-radius: 6px;
+        border: none;
+        font-size: 16px;
+    }
+    #join_section button {
+        padding: 8px 12px;
+        margin-left: 6px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        background: #2d8a3a;
+        color: #fff;
+        font-size: 16px;
+    }
+
+    #table_wrapper {
+        margin-top: 20px;
+        position: relative;
+        width: 1100px;
+        height: 620px;
+    }
+    .poker-table {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 780px;
+        height: 380px;
+        margin-left: -390px;
+        margin-top: -190px;
+        background: radial-gradient(circle at center, #165c2b, #093018);
+        border: 10px solid #4b2c10;
+        border-radius: 50% / 60%;
+        box-shadow: 0 0 30px rgba(0,0,0,0.85);
+    }
+
+    .board {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -60%);
+        display: flex;
+        gap: 10px;
+    }
+    .card {
+        width: 64px;
+        height: 90px;
+        border-radius: 8px;
+        background: #fafafa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        font-size: 22px;
+        box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    }
+    .card.empty {
+        background: rgba(255,255,255,0.12);
+        color: #ccc;
+        border: 1px dashed #777;
+    }
+    .card.red { color: #c42525; }
+    .card.black { color: #000; }
+
+    .pot-display {
+        position: absolute;
+        top: 53%;
+        left: 50%;
+        transform: translate(-50%, 25%);
+        text-align: center;
+        font-size: 18px;
+    }
+
+    .seat {
+        position: absolute;
+        width: 170px;
+        background: rgba(0,0,0,0.7);
+        border-radius: 12px;
+        padding: 6px 8px;
+        font-size: 14px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.75);
+    }
+    .seat .name { font-weight: bold; font-size: 15px; }
+    .seat .chips { font-size: 13px; }
+    .seat .status { font-size: 13px; color: #f7c35b; }
+    .seat .hole-cards {
+        margin-top: 4px;
+        display: flex;
+        gap: 4px;
+    }
+    .seat .hole-cards .card {
+        width: 34px;
+        height: 48px;
+        font-size: 14px;
+    }
+    .seat.current { outline: 2px solid #f7c35b; }
+    .seat.folded { opacity: 0.4; }
+
+    /* seat positions tuned for larger table */
+    #seat-0 { top: 4%;  left: 50%; transform: translateX(-50%); }
+    #seat-1 { top: 18%; left: 8%; }
+    #seat-2 { top: 18%; right: 8%; }
+    #seat-3 { top: 50%; right: -1%; transform: translateY(-50%); }
+    #seat-4 { bottom: 18%; right: 8%; }
+    #seat-5 { bottom: 18%; left: 8%; }
+    #seat-6 { top: 50%; left: -1%; transform: translateY(-50%); }
+
+    #player_panel {
+        margin-top: 20px;
+        width: 1100px;
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        font-size: 16px;
+    }
+    #my_info, #action_area {
+        flex: 1;
+        background: rgba(0,0,0,0.55);
+        padding: 12px 14px;
+        border-radius: 10px;
+    }
+    #my_cards span {
+        margin-right: 8px;
+        padding: 5px 9px;
+        border-radius: 6px;
+        background: #fafafa;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    #my_cards span.red { color: #c42525; }
+    #my_cards span.black { color: #000; }
+
+    #action_buttons button {
+        padding: 7px 11px;
+        margin: 4px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
+    }
+    #action_buttons button.fold   { background: #aa3333; color: #fff; }
+    #action_buttons button.check  { background: #555;    color: #fff; }
+    #action_buttons button.call   { background: #2d8a3a; color: #fff; }
+    #action_buttons button.raise  { background: #f7c35b; color: #000; }
+    #raise_amount {
+        width: 100px;
+        padding: 5px 7px;
+        border-radius: 6px;
+        border: none;
+        margin-left: 6px;
+        font-size: 15px;
+    }
+    #status_msg {
+        margin-top: 6px;
+        font-size: 14px;
+        color: #f7c35b;
+    }
+</style>
+</head>
+<body>
+<h1>Texas Hold’em – Player</h1>
+
+<div id="top-bar">
+    Street: <strong id="street">-</strong> |
+    Board: <strong id="board_text">-</strong> |
+    Pot: <strong id="pot_text">0</strong>
+</div>
+
+<div id="join_section">
+    <input id="player_name" type="text" placeholder="Your name">
+    <button id="join_btn">Join Table</button>
+    <span id="join_status"></span>
+</div>
+
+<div id="table_wrapper">
+    <div class="poker-table"></div>
+
+    <div class="board" id="board_cards">
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+    </div>
+
+    <div class="pot-display">
+        Pot<br><span id="pot_center">0</span>
+    </div>
+
+    <!-- 7 seats -->
+    <div class="seat" id="seat-0">
+        <div class="name">Hero AI</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-1">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-2">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-3">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-4">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-5">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-6">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+</div>
+
+<div id="player_panel">
+    <div id="my_info">
+        <h3>Your Info</h3>
+        <p>Seat: <strong id="my_seat">-</strong></p>
+        <p>Cards: <span id="my_cards"></span></p>
+    </div>
+    <div id="action_area">
+        <h3>Action</h3>
+        <div id="action_prompt">Wait for your turn…</div>
+        <div id="action_buttons" style="margin-top:8px; display:none;">
+            <button class="fold"  data-action="FOLD">Fold</button>
+            <button class="check" data-action="CHECK">Check</button>
+            <button class="call"  data-action="CALL">Call</button>
+            <button class="raise" data-action="RAISE">Raise</button>
+            <input id="raise_amount" type="number" min="0" placeholder="Amt">
+        </div>
+        <div id="status_msg"></div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let mySeat = null;
+
+    function cardLabel(code) {
+        if (!code) return "";
+        const rank = code[0];
+        const suit = code[1];
+        const map = {h: "♥", d: "♦", c: "♣", s: "♠"};
+        return rank + (map[suit] || "?");
+    }
+    function cardColorClass(code) {
+        if (!code) return "black";
+        const suit = code[1];
+        return (suit === "h" || suit === "d") ? "red" : "black";
+    }
+
+    function renderCardDiv(parent, code, small) {
+        const div = document.createElement("div");
+        div.classList.add("card", cardColorClass(code));
+        if (small) {
+            div.style.width = "28px";
+            div.style.height = "40px";
+            div.style.fontSize = "11px";
+        }
+        div.textContent = cardLabel(code);
+        parent.appendChild(div);
+    }
+
+    document.getElementById("join_btn").onclick = () => {
+        const name = document.getElementById("player_name").value.trim() || "Guest";
+        socket.emit("join_table", {name});
+    };
+
+    socket.on("join_result", (data) => {
+        if (!data.success) {
+            document.getElementById("join_status").textContent =
+                "Join failed: " + (data.error || "Unknown error");
+            return;
+        }
+        mySeat = data.seat;
+        document.getElementById("join_status").textContent = "Joined seat " + mySeat;
+        document.getElementById("my_seat").textContent = mySeat;
+    });
+
+    socket.on("hole_cards", (data) => {
+        const cards = data.cards || [];
+        const cont = document.getElementById("my_cards");
+        cont.innerHTML = "";
+        cards.forEach(c => {
+            const span = document.createElement("span");
+            span.classList.add(cardColorClass(c));
+            span.textContent = cardLabel(c);
+            cont.appendChild(span);
+        });
+
+        if (mySeat !== null) {
+            const seatEl = document.getElementById("seat-" + mySeat);
+            const hc = seatEl.querySelector(".hole-cards");
+            hc.innerHTML = "";
+            cards.forEach(c => renderCardDiv(hc, c, true));
+        }
+    });
+
+    socket.on("table_state", (data) => {
+        document.getElementById("street").textContent = data.street || "-";
+        const board = data.board || [];
+        document.getElementById("board_text").textContent = board.join(" ") || "-";
+        document.getElementById("pot_text").textContent = data.pot;
+        document.getElementById("pot_center").textContent = data.pot;
+        const currentSeat = data.current_player_seat;
+
+        const boardDiv = document.getElementById("board_cards");
+        const cardDivs = boardDiv.querySelectorAll(".card");
+        for (let i = 0; i < 5; i++) {
+            const div = cardDivs[i];
+            const val = board[i];
+            if (val) {
+                div.classList.remove("empty");
+                div.classList.add(cardColorClass(val));
+                div.textContent = cardLabel(val);
+            } else {
+                div.classList.add("empty");
+                div.textContent = "?";
+            }
+        }
+
+        for (let s = 0; s <= 6; s++) {
+            const seatEl = document.getElementById("seat-" + s);
+            seatEl.classList.remove("current", "folded");
+            seatEl.querySelector(".name").textContent = (s === 0 ? "Hero AI" : "Empty");
+            seatEl.querySelector(".chips").textContent = "–";
+            seatEl.querySelector(".status").textContent = "";
+            const hc = seatEl.querySelector(".hole-cards");
+            if (hc) hc.innerHTML = "";
+        }
+
+        (data.players || []).forEach(p => {
+            const s = p.seat;
+            const seatEl = document.getElementById("seat-" + s);
+            if (!seatEl) return;
+            seatEl.querySelector(".name").textContent =
+                (p.is_hero ? "Hero AI" : (p.name || ("Seat " + s)));
+            seatEl.querySelector(".chips").textContent = "Chips: " + p.chips;
+            if (p.folded) {
+                seatEl.classList.add("folded");
+                seatEl.querySelector(".status").textContent = "Folded";
+            } else {
+                seatEl.querySelector(".status").textContent = "";
+            }
+            if (s === currentSeat) {
+                seatEl.classList.add("current");
+                seatEl.querySelector(".status").textContent = "To act";
+            }
+        });
+    });
+
+    socket.on("request_action", (data) => {
+        if (data.seat !== mySeat) {
+            document.getElementById("action_buttons").style.display = "none";
+            document.getElementById("action_prompt").textContent =
+                "Waiting for other players…";
+            return;
+        }
+        document.getElementById("action_buttons").style.display = "block";
+        document.getElementById("action_prompt").textContent =
+            "Your turn. To call: " + data.to_call;
+        document.getElementById("status_msg").textContent = "";
+    });
+
+    document.getElementById("action_buttons").onclick = (e) => {
+        const action = e.target.getAttribute("data-action");
+        if (!action || mySeat === null) return;
+
+        let amount = 0;
+        if (action === "RAISE") {
+            amount = parseInt(document.getElementById("raise_amount").value || "0", 10);
+            if (isNaN(amount) || amount < 0) amount = 0;
+        }
+
+        socket.emit("player_action", {
+            seat: mySeat,
+            action: action,
+            amount: amount
+        });
+
+        document.getElementById("action_buttons").style.display = "none";
+        document.getElementById("action_prompt").textContent = "Action sent.";
+        document.getElementById("status_msg").textContent =
+            "You chose: " + action + (action === "RAISE" ? " " + amount : "");
+    };
+</script>
+</body>
+</html>

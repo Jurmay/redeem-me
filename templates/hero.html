@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Poker Hero (AI Coach)</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: radial-gradient(circle at top, #243, #010307);
+        color: #f4f4f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 18px;
+    }
+    h1 { margin-top: 24px; font-size: 32px; }
+
+    #control_panel {
+        margin-top: 12px;
+        background: rgba(0,0,0,0.55);
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 16px;
+    }
+    #control_panel input {
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: none;
+        margin: 0 6px;
+        font-size: 15px;
+    }
+    #control_panel button {
+        padding: 7px 11px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        background: #2d8a3a;
+        color: #fff;
+        margin-left: 6px;
+        font-size: 15px;
+    }
+
+    #table_wrapper {
+        margin-top: 20px;
+        position: relative;
+        width: 1200px;
+        height: 640px;
+    }
+    .poker-table {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 820px;
+        height: 400px;
+        margin-left: -410px;
+        margin-top: -200px;
+        background: radial-gradient(circle at center, #155a2a, #062314);
+        border: 10px solid #4b2c10;
+        border-radius: 50% / 60%;
+        box-shadow: 0 0 32px rgba(0,0,0,0.9);
+    }
+
+    .board {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -60%);
+        display: flex;
+        gap: 10px;
+    }
+    .card {
+        width: 70px;
+        height: 98px;
+        border-radius: 8px;
+        background: #fafafa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        font-size: 24px;
+        box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    }
+    .card.empty {
+        background: rgba(255,255,255,0.12);
+        color: #ccc;
+        border: 1px dashed #777;
+    }
+    .card.red { color: #c42525; }
+    .card.black { color: #000; }
+
+    .pot-display {
+        position: absolute;
+        top: 53%;
+        left: 50%;
+        transform: translate(-50%, 25%);
+        text-align: center;
+        font-size: 18px;
+    }
+
+    .seat {
+        position: absolute;
+        width: 180px;
+        background: rgba(0,0,0,0.7);
+        border-radius: 12px;
+        padding: 6px 8px;
+        font-size: 14px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.8);
+    }
+    .seat .name { font-weight: bold; font-size: 16px; }
+    .seat .chips { font-size: 13px; }
+    .seat .status { font-size: 13px; color: #f7c35b; }
+    .seat .hole-cards {
+        margin-top: 4px;
+        display: flex;
+        gap: 4px;
+    }
+    .seat .hole-cards .card {
+        width: 34px;
+        height: 48px;
+        font-size: 14px;
+    }
+    .seat.current { outline: 2px solid #f7c35b; }
+    .seat.folded { opacity: 0.4; }
+
+    #seat-0 { top: 4%;  left: 50%; transform: translateX(-50%); }
+    #seat-1 { top: 20%; left: 7%; }
+    #seat-2 { top: 20%; right: 7%; }
+    #seat-3 { top: 50%; right: -1%; transform: translateY(-50%); }
+    #seat-4 { bottom: 20%; right: 7%; }
+    #seat-5 { bottom: 20%; left: 7%; }
+    #seat-6 { top: 50%; left: -1%; transform: translateY(-50%); }
+
+    #bottom_panel {
+        margin-top: 20px;
+        width: 1200px;
+        display: flex;
+        gap: 16px;
+        font-size: 16px;
+    }
+    #hero_info, #decision_info, #result_info {
+        flex: 1;
+        background: rgba(0,0,0,0.55);
+        padding: 12px 14px;
+        border-radius: 10px;
+    }
+    #hero_cards_view span {
+        margin-right: 8px;
+        padding: 5px 9px;
+        border-radius: 6px;
+        background: #fafafa;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    #hero_cards_view span.red { color: #c42525; }
+    #hero_cards_view span.black { color: #000; }
+
+    pre {
+        white-space: pre-wrap;
+        max-height: 230px;
+        overflow: auto;
+        background: rgba(0,0,0,0.6);
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+</style>
+</head>
+<body>
+<h1>Texas Hold’em – Hero / AI Coach</h1>
+
+<div id="control_panel">
+    Hero cards (optional, e.g. <code>As Kd</code>):
+    <input id="hero_cards" type="text" size="10" placeholder="As Kd">
+    Board (optional 5 cards, e.g. <code>Ah Kc 7d 2s 3c</code>):
+    <input id="board_cards" type="text" size="20" placeholder="Ah Kc 7d 2s 3c">
+    <button id="start_hand_btn">Start Hand</button>
+    <button id="download_csv_btn">Download CSV</button>
+</div>
+
+<div id="table_wrapper">
+    <div class="poker-table"></div>
+
+    <div class="board" id="board_cards_div">
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+        <div class="card empty">?</div>
+    </div>
+
+    <div class="pot-display">
+        Pot<br><span id="pot_center">0</span><br>
+        Street: <span id="street">-</span>
+    </div>
+
+    <div class="seat" id="seat-0">
+        <div class="name">Hero AI</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-1">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-2">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-3">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-4">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-5">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+    <div class="seat" id="seat-6">
+        <div class="name">Empty</div>
+        <div class="chips">–</div>
+        <div class="status"></div>
+        <div class="hole-cards"></div>
+    </div>
+</div>
+
+<div id="bottom_panel">
+    <div id="hero_info">
+        <h3>Hero Hand</h3>
+        <p>Cards: <span id="hero_cards_view"></span></p>
+    </div>
+    <div id="decision_info">
+        <h3>AI Decision</h3>
+        <p>Action: <strong id="hero_action">-</strong></p>
+        <p>Reason:</p>
+        <p id="hero_reason">-</p>
+    </div>
+    <div id="result_info">
+        <h3>Last Hand Result</h3>
+        <pre id="hand_result"></pre>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    socket.emit("hero_join", {});
+
+    let currentHeroCards = [];
+    let currentPot = 0;
+    let lastDecision = null;
+    let handHistory = [];
+    let handCounter = 0;
+
+    function cardLabel(code) {
+        if (!code) return "";
+        const rank = code[0];
+        const suit = code[1];
+        const map = {h: "♥", d: "♦", c: "♣", s: "♠"};
+        return rank + (map[suit] || "?");
+    }
+    function cardColorClass(code) {
+        if (!code) return "black";
+        const suit = code[1];
+        return (suit === "h" || suit === "d") ? "red" : "black";
+    }
+    function renderCardDiv(parent, code, small) {
+        const div = document.createElement("div");
+        div.classList.add("card", cardColorClass(code));
+        if (small) {
+            div.style.width = "28px";
+            div.style.height = "40px";
+            div.style.fontSize = "11px";
+        }
+        div.textContent = cardLabel(code);
+        parent.appendChild(div);
+    }
+
+    document.getElementById("start_hand_btn").onclick = () => {
+        const heroCards = document.getElementById("hero_cards").value.trim();
+        const boardCards = document.getElementById("board_cards").value.trim();
+        socket.emit("hero_start_hand", {
+            hero_cards: heroCards || null,
+            board_cards: boardCards || null
+        });
+        document.getElementById("hero_action").textContent = "-";
+        document.getElementById("hero_reason").textContent = "-";
+        document.getElementById("hand_result").textContent = "";
+        lastDecision = null;
+    };
+
+    document.getElementById("download_csv_btn").onclick = () => {
+        if (!handHistory.length) {
+            alert("No hands recorded yet.");
+            return;
+        }
+        const headers = [
+            "hand_id","hero_cards","board","pot",
+            "action","reason","players_json"
+        ];
+        const lines = [headers.join(",")];
+        handHistory.forEach(r => {
+            const row = [
+                r.hand_id,
+                `"${r.hero_cards}"`,
+                `"${r.board}"`,
+                r.pot,
+                r.action,
+                `"${(r.reason || "").replace(/"/g,'""')}"`,
+                `"${r.players_json.replace(/"/g,'""')}"`,
+            ];
+            lines.push(row.join(","));
+        });
+        const csv = lines.join("\n");
+        const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "poker_hands.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    socket.on("table_state", (data) => {
+        document.getElementById("street").textContent = data.street || "-";
+        const board = data.board || [];
+        currentPot = data.pot || 0;
+        document.getElementById("pot_center").textContent = currentPot;
+
+        const boardDiv = document.getElementById("board_cards_div");
+        const cardDivs = boardDiv.querySelectorAll(".card");
+        for (let i = 0; i < 5; i++) {
+            const div = cardDivs[i];
+            const val = board[i];
+            if (val) {
+                div.classList.remove("empty");
+                div.classList.add(cardColorClass(val));
+                div.textContent = cardLabel(val);
+            } else {
+                div.classList.add("empty");
+                div.textContent = "?";
+            }
+        }
+
+        for (let s = 0; s <= 6; s++) {
+            const seatEl = document.getElementById("seat-" + s);
+            seatEl.classList.remove("current", "folded");
+            seatEl.querySelector(".name").textContent =
+                (s === 0 ? "Hero AI" : "Empty");
+            seatEl.querySelector(".chips").textContent = "–";
+            seatEl.querySelector(".status").textContent = "";
+            const hc = seatEl.querySelector(".hole-cards");
+            if (hc) hc.innerHTML = "";
+        }
+
+        const currentSeat = data.current_player_seat;
+        (data.players || []).forEach(p => {
+            const s = p.seat;
+            const seatEl = document.getElementById("seat-" + s);
+            if (!seatEl) return;
+            seatEl.querySelector(".name").textContent =
+                (p.is_hero ? "Hero AI" : (p.name || ("Seat " + s)));
+            seatEl.querySelector(".chips").textContent = "Chips: " + p.chips;
+            if (p.folded) {
+                seatEl.classList.add("folded");
+                seatEl.querySelector(".status").textContent = "Folded";
+            }
+            if (s === currentSeat) {
+                seatEl.classList.add("current");
+                seatEl.querySelector(".status").textContent = "To act";
+            }
+        });
+    });
+
+    socket.on("hero_hole_cards", (data) => {
+        currentHeroCards = data.cards || [];
+        const cont = document.getElementById("hero_cards_view");
+        cont.innerHTML = "";
+        currentHeroCards.forEach(c => {
+            const span = document.createElement("span");
+            span.classList.add(cardColorClass(c));
+            span.textContent = cardLabel(c);
+            cont.appendChild(span);
+        });
+
+        const heroSeat = document.getElementById("seat-0");
+        const hc = heroSeat.querySelector(".hole-cards");
+        hc.innerHTML = "";
+        currentHeroCards.forEach(c => renderCardDiv(hc, c, true));
+    });
+
+    socket.on("hero_decision", (data) => {
+        lastDecision = data;
+        document.getElementById("hero_action").textContent = data.action;
+        document.getElementById("hero_reason").textContent = data.reason || "";
+    });
+
+    socket.on("hand_result", (data) => {
+        handCounter += 1;
+        const board = data.board || [];
+        const playersJson = JSON.stringify(data.players || []);
+        handHistory.push({
+            hand_id: handCounter,
+            hero_cards: currentHeroCards.join(" "),
+            board: board.join(" "),
+            pot: currentPot,
+            action: lastDecision ? lastDecision.action : "",
+            reason: lastDecision ? lastDecision.reason : "",
+            players_json: playersJson
+        });
+
+        document.getElementById("hand_result").textContent =
+            JSON.stringify(data, null, 2);
+    });
+</script>
+</body>
+</html>

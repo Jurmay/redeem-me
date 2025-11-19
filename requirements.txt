@@ -1,0 +1,5 @@
+flask==3.0.3
+flask-socketio==5.3.6
+simple-websocket==0.10.1
+eventlet==0.36.1
+gunicorn==22.0.0
