@@ -1,14 +1,32 @@
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room   # ← this line is REQUIRED
+from flask import Flask, render_template, request, make_response
+from flask_socketio import SocketIO, emit, join_room
 import os
 import random
+import io
+import csv
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "secret!"
+
+# Use threading to avoid eventlet issues on Render
 socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
 TABLE_ROOM = "table_main"
 HERO_SEAT = 0
+
+
+class PlayerStats:
+    """Simple per-seat stats for profiling."""
+    def __init__(self):
+        self.hands_played = 0
+        self.vpip_hands = 0
+        self.pfr_hands = 0
+
+    def vpip_pct(self):
+        return 0.0 if self.hands_played == 0 else 100.0 * self.vpip_hands / self.hands_played
+
+    def pfr_pct(self):
+        return 0.0 if self.hands_played == 0 else 100.0 * self.pfr_hands / self.hands_played
 
 
 class PlayerState:
@@ -35,14 +53,20 @@ class GameState:
         self.to_act = set()     # seats that still need to act this street
         self.hand_running = False
 
+        # history and stats
+        self.hand_history = []  # list of finished hands
+        self.stats = {}         # seat -> PlayerStats
+
 
 game = GameState()
 sid_to_seat = {}
 
 
+# ---------- Helpers ----------
+
 def make_deck():
     ranks = "23456789TJQKA"
-    suits = "shdc"
+    suits = "shdc"  # spades, hearts, diamonds, clubs
     deck = [r + s for r in ranks for s in suits]
     random.shuffle(deck)
     return deck
@@ -78,8 +102,51 @@ def broadcast_state():
     socketio.emit("table_state", data, room=TABLE_ROOM)
 
 
+def record_hand(result):
+    """Keep a copy of each finished hand for CSV export."""
+    hand_copy = {
+        "board": list(result.get("board", [])),
+        "note": result.get("note", ""),
+        "players": [
+            {
+                "seat": p["seat"],
+                "name": p["name"],
+                "hole_cards": list(p["hole_cards"]),
+                "folded": p["folded"],
+            }
+            for p in result.get("players", [])
+        ],
+    }
+    game.hand_history.append(hand_copy)
+
+
+def broadcast_stats():
+    stats_view = []
+    for p in game.players:
+        st = game.stats.get(p.seat)
+        if not st:
+            continue
+        stats_view.append({
+            "seat": p.seat,
+            "name": p.name,
+            "hands_played": st.hands_played,
+            "vpip_pct": round(st.vpip_pct(), 1),
+            "pfr_pct": round(st.pfr_pct(), 1),
+        })
+    socketio.emit("stats_update", {"stats": stats_view}, room=TABLE_ROOM)
+
+
+def reset_game():
+    global game, sid_to_seat
+    game = GameState()
+    sid_to_seat = {}
+    socketio.emit("table_reset", room=TABLE_ROOM)
+
+
+# ---------- Dealing & Streets ----------
+
 def deal_new_hand(hero_cards=None, board_cards=None):
-    # Reset simple stacks and status each hand (for learning, not bankroll tracking).
+    # Reset simple stacks and status each hand (not real bankroll tracking).
     for p in game.players:
         p.chips = 1000
         p.folded = False
@@ -94,15 +161,8 @@ def deal_new_hand(hero_cards=None, board_cards=None):
     game.hand_running = True
 
     # Parse manual hero or board cards (e.g. "As Kd", "Ah Kc 7d 2s 3c")
-    if hero_cards:
-        hero_cards = hero_cards.split()
-    else:
-        hero_cards = []
-
-    if board_cards:
-        board_cards = board_cards.split()
-    else:
-        board_cards = []
+    hero_cards = hero_cards.split() if hero_cards else []
+    board_cards = board_cards.split() if board_cards else []
 
     used = set(hero_cards + board_cards)
     game.deck = [c for c in game.deck if c not in used]
@@ -120,6 +180,12 @@ def deal_new_hand(hero_cards=None, board_cards=None):
             p.hole_cards = hero_cards[:]
         else:
             p.hole_cards = [game.deck.pop(), game.deck.pop()]
+
+    # Track "hands played" for all players who receive cards
+    for p in game.players:
+        if p.seat not in game.stats:
+            game.stats[p.seat] = PlayerStats()
+        game.stats[p.seat].hands_played += 1
 
     # Preflop: nothing on board yet
     game.board = []
@@ -155,25 +221,26 @@ def next_street_or_showdown():
         game.street = "river"
         game.board = game.full_board[:5]
     else:
-        # Showdown – for now, just reveal all hands and finish.
+        # Showdown – reveal all hands and finish (no winner calc yet).
         result = {
-            "board": game.board,
+            "board": list(game.board),
             "players": [
                 {
                     "seat": p.seat,
                     "name": p.name,
-                    "hole_cards": p.hole_cards,
+                    "hole_cards": list(p.hole_cards),
                     "folded": p.folded,
                 } for p in game.players
             ],
-            "note": "Showdown – winner not auto-calculated in this demo."
+            "note": "Showdown – winner not auto-calculated in this demo.",
         }
+        record_hand(result)
         socketio.emit("hand_result", result, room=TABLE_ROOM)
         game.hand_running = False
         broadcast_state()
+        broadcast_stats()
         return
 
-    # New street: reset simple betting trackers
     game.current_bet = 0
     game.to_act = set(active_seats())
     seats = active_seats()
@@ -189,17 +256,16 @@ def seat_order_after(seat):
     if seat is None:
         return seats[0]
     bigger = [s for s in seats if s > seat]
-    if bigger:
-        return bigger[0]
-    return seats[0]
+    return bigger[0] if bigger else seats[0]
 
+
+# ---------- Action Logic ----------
 
 def ask_for_action():
     if not game.hand_running:
         return
 
     if not game.to_act:
-        # Betting round over
         next_street_or_showdown()
         return
 
@@ -225,7 +291,6 @@ def ask_for_action():
         apply_action(player, decision["action"], decision.get("amount", 0),
                      is_hero=True, reason=decision["reason"])
     else:
-        # Ask human via socket
         if player.sid:
             to_call = game.current_bet
             socketio.emit("request_action", {
@@ -253,7 +318,7 @@ def hero_ai_decision(player):
     pot = game.pot
 
     if game.street == "preflop":
-        if high_pair or big_ace:
+        if high_pair or big_ace or suited:
             amount = max(20, pot + 10)
             reason = "Strong preflop hand; we raise to build the pot."
             return {"action": "RAISE", "amount": amount, "reason": reason}
@@ -295,6 +360,9 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
     if seat not in game.to_act or not game.hand_running:
         return
 
+    is_preflop = (game.street == "preflop")
+    stats = game.stats.get(seat)
+
     if action == "FOLD":
         player.folded = True
         game.to_act.discard(seat)
@@ -308,6 +376,10 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
         game.pot += call_amount
         game.to_act.discard(seat)
 
+        # VPIP: preflop voluntary call
+        if is_preflop and stats and call_amount > 0:
+            stats.vpip_hands += 1
+
     elif action == "RAISE":
         # Simple model: call up to current_bet, then raise "amount"
         call_amount = min(player.chips, game.current_bet)
@@ -320,6 +392,12 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
             player.chips -= pay
             game.pot += pay
         game.current_bet = total_bet
+
+        # VPIP + PFR tracking (preflop only)
+        if is_preflop and stats and total_bet > 0:
+            stats.vpip_hands += 1
+            stats.pfr_hands += 1
+
         # Others must act again
         game.to_act = set(s for s in active_seats() if s != seat)
 
@@ -327,27 +405,30 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
     remaining = [s for s in active_seats()]
     if len(remaining) <= 1 and game.hand_running:
         result = {
-            "board": game.board,
+            "board": list(game.board),
             "players": [
                 {
                     "seat": p.seat,
                     "name": p.name,
-                    "hole_cards": p.hole_cards,
+                    "hole_cards": list(p.hole_cards),
                     "folded": p.folded,
                 } for p in game.players
             ],
-            "note": "Hand ended because all but one player folded."
+            "note": "Hand ended because all but one player folded.",
         }
+        record_hand(result)
         socketio.emit("hand_result", result, room=TABLE_ROOM)
         game.hand_running = False
         broadcast_state()
+        broadcast_stats()
         return
 
-    # Move to next player
     game.current_player_seat = seat_order_after(seat)
     broadcast_state()
     ask_for_action()
 
+
+# ---------- Routes ----------
 
 @app.route("/")
 def player_page():
@@ -359,9 +440,48 @@ def hero_page():
     return render_template("hero.html")
 
 
+@app.route("/history.csv")
+def download_history():
+    """Download all completed hands as CSV – one row per player per hand."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "hand_id",
+        "board",
+        "note",
+        "seat",
+        "name",
+        "hole_cards",
+        "folded",
+    ])
+
+    for hand_id, hand in enumerate(game.hand_history, start=1):
+        board_str = " ".join(hand["board"])
+        note = hand.get("note", "")
+        for p in hand["players"]:
+            hole_str = " ".join(p["hole_cards"])
+            writer.writerow([
+                hand_id,
+                board_str,
+                note,
+                p["seat"],
+                p["name"],
+                hole_str,
+                p["folded"],
+            ])
+
+    csv_data = output.getvalue()
+    resp = make_response(csv_data)
+    resp.headers["Content-Type"] = "text/csv"
+    resp.headers["Content-Disposition"] = "attachment; filename=poker_hands.csv"
+    return resp
+
+
+# ---------- Socket.IO Handlers ----------
+
 @socketio.on("hero_join")
 def on_hero_join(data):
-    # Hero/admin joins the common table room for updates
     join_room(TABLE_ROOM)
     emit("hero_joined", {"ok": True})
 
@@ -386,6 +506,10 @@ def on_join(data):
     p = PlayerState(seat=seat, name=name, is_hero=False, sid=sid)
     game.players.append(p)
     sid_to_seat[sid] = seat
+
+    if seat not in game.stats:
+        game.stats[seat] = PlayerStats()
+
     join_room(TABLE_ROOM)
 
     emit("join_result", {"success": True, "seat": seat})
@@ -409,12 +533,19 @@ def on_hero_start(data):
     # Ensure hero exists (seat 0)
     hero = find_player_by_seat(HERO_SEAT)
     if not hero:
-        hero = PlayerState(seat=HERO_SEAT, name="Hero (AI)", is_hero=True, sid=None)
+        hero = PlayerState(seat=HERO_SEAT, name="Hero AI", is_hero=True, sid=None)
         game.players.insert(0, hero)
+        if HERO_SEAT not in game.stats:
+            game.stats[HERO_SEAT] = PlayerStats()
 
     hero_cards = data.get("hero_cards")    # e.g. "As Kd"
     board_cards = data.get("board_cards")  # e.g. "Ah Kc 7d 2s 3c"
     deal_new_hand(hero_cards=hero_cards, board_cards=board_cards)
+
+
+@socketio.on("hero_reset")
+def on_hero_reset():
+    reset_game()
 
 
 @socketio.on("player_action")
@@ -427,6 +558,8 @@ def on_player_action(data):
         return
     apply_action(player, action, amount, is_hero=False)
 
+
+# ---------- Main ----------
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

@@ -1,433 +1,424 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Poker Hero (AI Coach)</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
+  <meta charset="utf-8" />
+  <title>Poker Hero (AI Coach)</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+          integrity="sha384-5oH/NFdV7lCJqVMoVdVf8Gv3a7bQtE99adWZCy4pBmZ8ZtXlRUPnKSuZbC8AYDy"
+          crossorigin="anonymous"></script>
+  <style>
     body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: radial-gradient(circle at top, #243, #010307);
-        color: #f4f4f4;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-size: 18px;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #f5f5f5;
+      background: radial-gradient(circle at top, #004f3a 0, #00110f 60%);
     }
-    h1 { margin-top: 24px; font-size: 32px; }
-
-    #control_panel {
-        margin-top: 12px;
-        background: rgba(0,0,0,0.55);
-        padding: 12px 16px;
-        border-radius: 10px;
-        font-size: 16px;
+    h1 {
+      text-align: center;
+      margin-top: 20px;
     }
-    #control_panel input {
-        padding: 6px 8px;
-        border-radius: 6px;
-        border: none;
-        margin: 0 6px;
-        font-size: 15px;
+    .top-controls {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 15px auto;
+      padding: 8px;
     }
-    #control_panel button {
-        padding: 7px 11px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        background: #2d8a3a;
-        color: #fff;
-        margin-left: 6px;
-        font-size: 15px;
+    .top-controls input {
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      width: 170px;
     }
-
-    #table_wrapper {
-        margin-top: 20px;
-        position: relative;
-        width: 1200px;
-        height: 640px;
+    .top-controls button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: #1c7c3d;
+      color: #fff;
+      font-weight: bold;
     }
-    .poker-table {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 820px;
-        height: 400px;
-        margin-left: -410px;
-        margin-top: -200px;
-        background: radial-gradient(circle at center, #155a2a, #062314);
-        border: 10px solid #4b2c10;
-        border-radius: 50% / 60%;
-        box-shadow: 0 0 32px rgba(0,0,0,0.9);
+    .top-controls button:hover {
+      background: #249c4c;
     }
 
-    .board {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -60%);
-        display: flex;
-        gap: 10px;
+    .table-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .table {
+      position: relative;
+      width: 700px;
+      height: 360px;
+      background: #005533;
+      border-radius: 50%;
+      border: 8px solid #c27b37;
+      box-shadow: 0 0 40px rgba(0,0,0,0.7);
+    }
+    .seat {
+      position: absolute;
+      width: 140px;
+      height: 55px;
+      background: #00000088;
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 12px;
+      box-shadow: 0 0 8px #000;
+    }
+    .seat.active {
+      border: 2px solid #ffd54f;
+    }
+    .seat-name {
+      font-weight: bold;
+    }
+    .seat-chips {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    .seat-note {
+      font-size: 11px;
+      opacity: 0.75;
+    }
+
+    /* seat positions around oval */
+    .seat-hero   { top: -25px; left: 280px; }
+    .seat-1      { top: 80px;  left: 40px;  }
+    .seat-2      { top: 80px;  right: 40px; }
+    .seat-3      { bottom: 80px; left: 40px; }
+    .seat-4      { bottom: 80px; right: 40px; }
+    .seat-5      { bottom: -25px; left: 180px; }
+    .seat-6      { bottom: -25px; right: 180px; }
+
+    .board-area {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .board-cards {
+      display: flex;
+      gap: 4px;
     }
     .card {
-        width: 70px;
-        height: 98px;
-        border-radius: 8px;
-        background: #fafafa;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
-        font-size: 24px;
-        box-shadow: 0 0 8px rgba(0,0,0,0.6);
+      width: 46px;
+      height: 62px;
+      border-radius: 6px;
+      border: 1px solid #111;
+      background: #e5e5e5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      color: #111;
     }
-    .card.empty {
-        background: rgba(255,255,255,0.12);
-        color: #ccc;
-        border: 1px dashed #777;
+    .card.back {
+      background: #245c40;
+      color: #245c40;
     }
-    .card.red { color: #c42525; }
-    .card.black { color: #000; }
-
-    .pot-display {
-        position: absolute;
-        top: 53%;
-        left: 50%;
-        transform: translate(-50%, 25%);
-        text-align: center;
-        font-size: 18px;
+    .info-line {
+      font-size: 13px;
     }
 
-    .seat {
-        position: absolute;
-        width: 180px;
-        background: rgba(0,0,0,0.7);
-        border-radius: 12px;
-        padding: 6px 8px;
-        font-size: 14px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.8);
+    .panels {
+      display: flex;
+      gap: 16px;
+      margin: 20px auto;
+      max-width: 1100px;
     }
-    .seat .name { font-weight: bold; font-size: 16px; }
-    .seat .chips { font-size: 13px; }
-    .seat .status { font-size: 13px; color: #f7c35b; }
-    .seat .hole-cards {
-        margin-top: 4px;
-        display: flex;
-        gap: 4px;
+    .panel {
+      flex: 1;
+      background: #00000080;
+      padding: 10px 12px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
+      font-size: 13px;
     }
-    .seat .hole-cards .card {
-        width: 34px;
-        height: 48px;
-        font-size: 14px;
+    .panel h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 14px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 3px;
     }
-    .seat.current { outline: 2px solid #f7c35b; }
-    .seat.folded { opacity: 0.4; }
 
-    #seat-0 { top: 4%;  left: 50%; transform: translateX(-50%); }
-    #seat-1 { top: 20%; left: 7%; }
-    #seat-2 { top: 20%; right: 7%; }
-    #seat-3 { top: 50%; right: -1%; transform: translateY(-50%); }
-    #seat-4 { bottom: 20%; right: 7%; }
-    #seat-5 { bottom: 20%; left: 7%; }
-    #seat-6 { top: 50%; left: -1%; transform: translateY(-50%); }
-
-    #bottom_panel {
-        margin-top: 20px;
-        width: 1200px;
-        display: flex;
-        gap: 16px;
-        font-size: 16px;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
     }
-    #hero_info, #decision_info, #result_info {
-        flex: 1;
-        background: rgba(0,0,0,0.55);
-        padding: 12px 14px;
-        border-radius: 10px;
+    th, td {
+      border: 1px solid #444;
+      padding: 3px 4px;
+      text-align: center;
     }
-    #hero_cards_view span {
-        margin-right: 8px;
-        padding: 5px 9px;
-        border-radius: 6px;
-        background: #fafafa;
-        font-weight: bold;
-        font-size: 18px;
+    th {
+      background: #123322;
     }
-    #hero_cards_view span.red { color: #c42525; }
-    #hero_cards_view span.black { color: #000; }
-
-    pre {
-        white-space: pre-wrap;
-        max-height: 230px;
-        overflow: auto;
-        background: rgba(0,0,0,0.6);
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 13px;
-    }
-</style>
+  </style>
 </head>
 <body>
-<h1>Texas Hold’em – Hero / AI Coach</h1>
+  <h1>Texas Hold’em – Hero / AI Coach</h1>
 
-<div id="control_panel">
-    Hero cards (optional, e.g. <code>As Kd</code>):
-    <input id="hero_cards" type="text" size="10" placeholder="As Kd">
-    Board (optional 5 cards, e.g. <code>Ah Kc 7d 2s 3c</code>):
-    <input id="board_cards" type="text" size="20" placeholder="Ah Kc 7d 2s 3c">
-    <button id="start_hand_btn">Start Hand</button>
-    <button id="download_csv_btn">Download CSV</button>
-</div>
+  <div class="top-controls">
+    <input id="hero-cards-input" placeholder="Hero cards (e.g. As Kd)" />
 
-<div id="table_wrapper">
-    <div class="poker-table"></div>
+    <input id="flop-input" placeholder="Flop (e.g. Ah Kc 7d)" />
+    <input id="turn-input" placeholder="Turn (e.g. 2s)" />
+    <input id="river-input" placeholder="River (e.g. 3c)" />
 
-    <div class="board" id="board_cards_div">
-        <div class="card empty">?</div>
-        <div class="card empty">?</div>
-        <div class="card empty">?</div>
-        <div class="card empty">?</div>
-        <div class="card empty">?</div>
-    </div>
+    <button id="start-hand-btn">Start Hand</button>
+    <button id="reset-btn">Reset</button>
+    <button id="download-btn">Download CSV</button>
+  </div>
 
-    <div class="pot-display">
-        Pot<br><span id="pot_center">0</span><br>
-        Street: <span id="street">-</span>
-    </div>
+  <div class="table-wrapper">
+    <div class="table">
+      <div class="seat seat-hero" id="seat-0">
+        <div class="seat-name">Hero AI</div>
+        <div class="seat-chips">Chips: -</div>
+        <div class="seat-note"></div>
+      </div>
+      <div class="seat seat-1" id="seat-1"><div class="seat-name">Empty</div><div class="seat-chips">-</div><div class="seat-note"></div></div>
+      <div class="seat seat-2" id="seat-2"><div class="seat-name">Empty</div><div class="seat-chips">-</div><div class="seat-note"></div></div>
+      <div class="seat seat-3" id="seat-3"><div class="seat-name">Empty</div><div class="seat-chips">-</div><div class="seat-note"></div></div>
+      <div class="seat seat-4" id="seat-4"><div class="seat-name">Empty</div><div class="seat-chips">-</div><div class="seat-note"></div></div>
+      <div class="seat seat-5" id="seat-5"><div class="seat-name">Empty</div><div class="seat-chips">-</div><div class="seat-note"></div></div>
+      <div class="seat seat-6" id="seat-6"><div class="seat-name">Empty</div><div class="seat-chips">-</div><div class="seat-note"></div></div>
 
-    <div class="seat" id="seat-0">
-        <div class="name">Hero AI</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
+      <div class="board-area">
+        <div class="board-cards" id="board-cards">
+          <div class="card back">?</div>
+          <div class="card back">?</div>
+          <div class="card back">?</div>
+          <div class="card back">?</div>
+          <div class="card back">?</div>
+        </div>
+        <div class="info-line">
+          Pot: <span id="pot-value">0</span> |
+          Street: <span id="street-label">-</span>
+        </div>
+      </div>
     </div>
-    <div class="seat" id="seat-1">
-        <div class="name">Empty</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
-    </div>
-    <div class="seat" id="seat-2">
-        <div class="name">Empty</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
-    </div>
-    <div class="seat" id="seat-3">
-        <div class="name">Empty</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
-    </div>
-    <div class="seat" id="seat-4">
-        <div class="name">Empty</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
-    </div>
-    <div class="seat" id="seat-5">
-        <div class="name">Empty</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
-    </div>
-    <div class="seat" id="seat-6">
-        <div class="name">Empty</div>
-        <div class="chips">–</div>
-        <div class="status"></div>
-        <div class="hole-cards"></div>
-    </div>
-</div>
+  </div>
 
-<div id="bottom_panel">
-    <div id="hero_info">
-        <h3>Hero Hand</h3>
-        <p>Cards: <span id="hero_cards_view"></span></p>
+  <div class="panels">
+    <div class="panel">
+      <h3>Hero Hand</h3>
+      <div id="hero-hand-display">—</div>
     </div>
-    <div id="decision_info">
-        <h3>AI Decision</h3>
-        <p>Action: <strong id="hero_action">-</strong></p>
-        <p>Reason:</p>
-        <p id="hero_reason">-</p>
+    <div class="panel">
+      <h3>AI Decision</h3>
+      <div>Action: <span id="ai-action">—</span></div>
+      <div>Amount: <span id="ai-amount">—</span></div>
+      <div>Reason:</div>
+      <div id="ai-reason">—</div>
     </div>
-    <div id="result_info">
-        <h3>Last Hand Result</h3>
-        <pre id="hand_result"></pre>
+    <div class="panel">
+      <h3>Last Hand Result</h3>
+      <div id="last-result-box">—</div>
     </div>
-</div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <h3>Player Stats</h3>
+      <table id="stats-table">
+        <thead>
+          <tr>
+            <th>Seat</th>
+            <th>Name</th>
+            <th>Hands</th>
+            <th>VPIP %</th>
+            <th>PFR %</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
 <script>
-    const socket = io();
-    socket.emit("hero_join", {});
+  const socket = io();
 
-    let currentHeroCards = [];
-    let currentPot = 0;
-    let lastDecision = null;
-    let handHistory = [];
-    let handCounter = 0;
+  const heroCardsInput = document.getElementById("hero-cards-input");
+  const flopInput = document.getElementById("flop-input");
+  const turnInput = document.getElementById("turn-input");
+  const riverInput = document.getElementById("river-input");
 
-    function cardLabel(code) {
-        if (!code) return "";
-        const rank = code[0];
-        const suit = code[1];
-        const map = {h: "♥", d: "♦", c: "♣", s: "♠"};
-        return rank + (map[suit] || "?");
+  const startBtn = document.getElementById("start-hand-btn");
+  const resetBtn = document.getElementById("reset-btn");
+  const downloadBtn = document.getElementById("download-btn");
+
+  const potSpan = document.getElementById("pot-value");
+  const streetSpan = document.getElementById("street-label");
+  const boardDiv = document.getElementById("board-cards");
+
+  const heroHandDiv = document.getElementById("hero-hand-display");
+  const aiActionSpan = document.getElementById("ai-action");
+  const aiAmountSpan = document.getElementById("ai-amount");
+  const aiReasonDiv = document.getElementById("ai-reason");
+  const lastResultBox = document.getElementById("last-result-box");
+
+  const statsTableBody = document.querySelector("#stats-table tbody");
+
+  // Tell server we are the hero console
+  socket.emit("hero_join", {});
+
+  // Start hand: combine flop/turn/river into single board string
+  startBtn.addEventListener("click", () => {
+    const heroCardsStr = heroCardsInput.value.trim();
+    const flopStr = flopInput.value.trim();
+    const turnStr = turnInput.value.trim();
+    const riverStr = riverInput.value.trim();
+
+    const board = [];
+    if (flopStr) board.push(...flopStr.split(/\s+/));
+    if (turnStr) board.push(turnStr);
+    if (riverStr) board.push(riverStr);
+    const boardStr = board.length ? board.join(" ") : null;
+
+    socket.emit("hero_start_hand", {
+      hero_cards: heroCardsStr || null,
+      board_cards: boardStr,
+    });
+  });
+
+  resetBtn.addEventListener("click", () => {
+    socket.emit("hero_reset");
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    window.location.href = "/history.csv";
+  });
+
+  socket.on("table_state", (data) => {
+    potSpan.textContent = data.pot || 0;
+    streetSpan.textContent = data.street || "-";
+
+    // Board
+    const board = data.board || [];
+    boardDiv.innerHTML = "";
+    for (let i = 0; i < 5; i++) {
+      const card = document.createElement("div");
+      card.className = "card";
+      if (i < board.length) {
+        card.textContent = board[i];
+      } else {
+        card.classList.add("back");
+        card.textContent = "?";
+      }
+      boardDiv.appendChild(card);
     }
-    function cardColorClass(code) {
-        if (!code) return "black";
-        const suit = code[1];
-        return (suit === "h" || suit === "d") ? "red" : "black";
-    }
-    function renderCardDiv(parent, code, small) {
-        const div = document.createElement("div");
-        div.classList.add("card", cardColorClass(code));
-        if (small) {
-            div.style.width = "28px";
-            div.style.height = "40px";
-            div.style.fontSize = "11px";
-        }
-        div.textContent = cardLabel(code);
-        parent.appendChild(div);
+
+    // Seats
+    for (let s = 0; s <= 6; s++) {
+      const seatDiv = document.getElementById("seat-" + s);
+      if (!seatDiv) continue;
+      seatDiv.classList.remove("active");
+      seatDiv.querySelector(".seat-name").textContent = "Empty";
+      seatDiv.querySelector(".seat-chips").textContent = "-";
+      seatDiv.querySelector(".seat-note").textContent = "";
     }
 
-    document.getElementById("start_hand_btn").onclick = () => {
-        const heroCards = document.getElementById("hero_cards").value.trim();
-        const boardCards = document.getElementById("board_cards").value.trim();
-        socket.emit("hero_start_hand", {
-            hero_cards: heroCards || null,
-            board_cards: boardCards || null
-        });
-        document.getElementById("hero_action").textContent = "-";
-        document.getElementById("hero_reason").textContent = "-";
-        document.getElementById("hand_result").textContent = "";
-        lastDecision = null;
-    };
-
-    document.getElementById("download_csv_btn").onclick = () => {
-        if (!handHistory.length) {
-            alert("No hands recorded yet.");
-            return;
-        }
-        const headers = [
-            "hand_id","hero_cards","board","pot",
-            "action","reason","players_json"
-        ];
-        const lines = [headers.join(",")];
-        handHistory.forEach(r => {
-            const row = [
-                r.hand_id,
-                `"${r.hero_cards}"`,
-                `"${r.board}"`,
-                r.pot,
-                r.action,
-                `"${(r.reason || "").replace(/"/g,'""')}"`,
-                `"${r.players_json.replace(/"/g,'""')}"`,
-            ];
-            lines.push(row.join(","));
-        });
-        const csv = lines.join("\n");
-        const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "poker_hands.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    socket.on("table_state", (data) => {
-        document.getElementById("street").textContent = data.street || "-";
-        const board = data.board || [];
-        currentPot = data.pot || 0;
-        document.getElementById("pot_center").textContent = currentPot;
-
-        const boardDiv = document.getElementById("board_cards_div");
-        const cardDivs = boardDiv.querySelectorAll(".card");
-        for (let i = 0; i < 5; i++) {
-            const div = cardDivs[i];
-            const val = board[i];
-            if (val) {
-                div.classList.remove("empty");
-                div.classList.add(cardColorClass(val));
-                div.textContent = cardLabel(val);
-            } else {
-                div.classList.add("empty");
-                div.textContent = "?";
-            }
-        }
-
-        for (let s = 0; s <= 6; s++) {
-            const seatEl = document.getElementById("seat-" + s);
-            seatEl.classList.remove("current", "folded");
-            seatEl.querySelector(".name").textContent =
-                (s === 0 ? "Hero AI" : "Empty");
-            seatEl.querySelector(".chips").textContent = "–";
-            seatEl.querySelector(".status").textContent = "";
-            const hc = seatEl.querySelector(".hole-cards");
-            if (hc) hc.innerHTML = "";
-        }
-
-        const currentSeat = data.current_player_seat;
-        (data.players || []).forEach(p => {
-            const s = p.seat;
-            const seatEl = document.getElementById("seat-" + s);
-            if (!seatEl) return;
-            seatEl.querySelector(".name").textContent =
-                (p.is_hero ? "Hero AI" : (p.name || ("Seat " + s)));
-            seatEl.querySelector(".chips").textContent = "Chips: " + p.chips;
-            if (p.folded) {
-                seatEl.classList.add("folded");
-                seatEl.querySelector(".status").textContent = "Folded";
-            }
-            if (s === currentSeat) {
-                seatEl.classList.add("current");
-                seatEl.querySelector(".status").textContent = "To act";
-            }
-        });
+    (data.players || []).forEach((p) => {
+      const seatDiv = document.getElementById("seat-" + p.seat);
+      if (!seatDiv) return;
+      seatDiv.querySelector(".seat-name").textContent = p.name;
+      seatDiv.querySelector(".seat-chips").textContent = "Chips: " + p.chips;
+      if (p.folded) {
+        seatDiv.querySelector(".seat-note").textContent = "Folded";
+      } else if (data.current_player_seat === p.seat) {
+        seatDiv.querySelector(".seat-note").textContent = "To act";
+        seatDiv.classList.add("active");
+      } else {
+        seatDiv.querySelector(".seat-note").textContent = "";
+      }
     });
+  });
 
-    socket.on("hero_hole_cards", (data) => {
-        currentHeroCards = data.cards || [];
-        const cont = document.getElementById("hero_cards_view");
-        cont.innerHTML = "";
-        currentHeroCards.forEach(c => {
-            const span = document.createElement("span");
-            span.classList.add(cardColorClass(c));
-            span.textContent = cardLabel(c);
-            cont.appendChild(span);
-        });
+  socket.on("hero_hole_cards", (data) => {
+    const cards = data.cards || [];
+    if (!cards.length) {
+      heroHandDiv.textContent = "—";
+    } else {
+      heroHandDiv.textContent = cards.join(" ");
+    }
+  });
 
-        const heroSeat = document.getElementById("seat-0");
-        const hc = heroSeat.querySelector(".hole-cards");
-        hc.innerHTML = "";
-        currentHeroCards.forEach(c => renderCardDiv(hc, c, true));
+  socket.on("hero_decision", (decision) => {
+    aiActionSpan.textContent = decision.action || "—";
+    aiAmountSpan.textContent = decision.amount || 0;
+    aiReasonDiv.textContent = decision.reason || "—";
+  });
+
+  socket.on("hand_result", (result) => {
+    const boardStr = (result.board || []).join(" ");
+    let html = `<p><strong>Board:</strong> ${boardStr}</p>`;
+    html += `<p><strong>Note:</strong> ${result.note || ""}</p>`;
+    html += "<ul>";
+    (result.players || []).forEach((p) => {
+      const cards = (p.hole_cards || []).join(" ");
+      const folded = p.folded ? " (folded)" : "";
+      html += `<li>Seat ${p.seat} – ${p.name}: ${cards}${folded}</li>`;
     });
+    html += "</ul>";
+    lastResultBox.innerHTML = html;
+  });
 
-    socket.on("hero_decision", (data) => {
-        lastDecision = data;
-        document.getElementById("hero_action").textContent = data.action;
-        document.getElementById("hero_reason").textContent = data.reason || "";
+  socket.on("stats_update", (data) => {
+    const stats = data.stats || [];
+    statsTableBody.innerHTML = "";
+    stats.forEach((row) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${row.seat}</td>
+        <td>${row.name}</td>
+        <td>${row.hands_played}</td>
+        <td>${row.vpip_pct}</td>
+        <td>${row.pfr_pct}</td>
+      `;
+      statsTableBody.appendChild(tr);
     });
+  });
 
-    socket.on("hand_result", (data) => {
-        handCounter += 1;
-        const board = data.board || [];
-        const playersJson = JSON.stringify(data.players || []);
-        handHistory.push({
-            hand_id: handCounter,
-            hero_cards: currentHeroCards.join(" "),
-            board: board.join(" "),
-            pot: currentPot,
-            action: lastDecision ? lastDecision.action : "",
-            reason: lastDecision ? lastDecision.reason : "",
-            players_json: playersJson
-        });
+  socket.on("table_reset", () => {
+    heroCardsInput.value = "";
+    flopInput.value = "";
+    turnInput.value = "";
+    riverInput.value = "";
 
-        document.getElementById("hand_result").textContent =
-            JSON.stringify(data, null, 2);
-    });
+    potSpan.textContent = "0";
+    streetSpan.textContent = "-";
+    boardDiv.innerHTML = "";
+    for (let i = 0; i < 5; i++) {
+      const card = document.createElement("div");
+      card.className = "card back";
+      card.textContent = "?";
+      boardDiv.appendChild(card);
+    }
+    heroHandDiv.textContent = "—";
+    aiActionSpan.textContent = "—";
+    aiAmountSpan.textContent = "—";
+    aiReasonDiv.textContent = "—";
+    lastResultBox.textContent = "—";
+    statsTableBody.innerHTML = "";
+
+    for (let s = 0; s <= 6; s++) {
+      const seatDiv = document.getElementById("seat-" + s);
+      if (!seatDiv) continue;
+      seatDiv.classList.remove("active");
+      seatDiv.querySelector(".seat-name").textContent = (s === 0) ? "Hero AI" : "Empty";
+      seatDiv.querySelector(".seat-chips").textContent = "-";
+      seatDiv.querySelector(".seat-note").textContent = "";
+    }
+  });
 </script>
 </body>
 </html>
