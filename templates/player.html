@@ -247,6 +247,7 @@
             for (let i = 0; i < 5; i++) {
                 const el = document.getElementById("board-" + i);
                 const card = board && board[i] ? board[i] : "?";
+                if (!el) continue;
                 if (card === "?") {
                     el.textContent = "?";
                 } else {
@@ -255,29 +256,31 @@
             }
         }
 
-        function resetSeats() {
-            for (let s = 0; s <= 5; s++) {
-                const seatBox = document.getElementById("seat-" + s);
-                const line = document.getElementById("seat-" + s + "-line");
-                if (!seatBox || !line) continue;
-                if (s === 0) {
-                    seatBox.querySelector(".seat-title").textContent = "Hero AI";
-                    line.textContent = "Chips: –";
-                } else {
-                    seatBox.querySelector(".seat-title").textContent = "Empty";
-                    line.textContent = "–";
-                }
-            }
-        }
-
         function updateSeats(players, currentSeat) {
-            resetSeats();
-            players.forEach(p => {
-                const id = "seat-" + p.seat;
-                const el = document.getElementById(id);
-                const line = document.getElementById(id + "-line");
-                if (!el || !line) return;
-                el.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
+            // Set all to default first
+            const defaults = [
+                { seat: 0, title: "Hero AI" },
+                { seat: 1, title: "Empty" },
+                { seat: 2, title: "Empty" },
+                { seat: 3, title: "Empty" },
+                { seat: 4, title: "Empty" },
+                { seat: 5, title: "Empty" }
+            ];
+            defaults.forEach(d => {
+                const box = document.getElementById("seat-" + d.seat);
+                const line = document.getElementById("seat-" + d.seat + "-line");
+                if (!box || !line) return;
+                box.querySelector(".seat-title").textContent = d.title;
+                line.textContent = (d.seat === 0) ? "Chips: –" : "–";
+            });
+
+            // Now fill from server state
+            const list = Array.isArray(players) ? players : [];
+            list.forEach(p => {
+                const box = document.getElementById("seat-" + p.seat);
+                const line = document.getElementById("seat-" + p.seat + "-line");
+                if (!box || !line) return;
+                box.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
                 let txt = "Chips: " + (p.chips ?? "-");
                 if (p.folded) txt += " (folded)";
                 if (currentSeat === p.seat) txt += " – To act";
