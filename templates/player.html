@@ -51,6 +51,33 @@
             background: radial-gradient(circle at top, #13542f, #06321a 65%, #04180f);
             position: relative;
         }
+
+        /* Seat boxes – same layout as hero view */
+        .seat {
+            position: absolute;
+            width: 130px;
+            padding: 6px 8px;
+            background: #020b0a;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+            font-size: 12px;
+            text-align: left;
+        }
+        .seat-title {
+            font-weight: 700;
+            display: block;
+        }
+        .seat-line {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+        #seat-0 { top: 8px;   left: 50%; transform: translate(-50%, 0); }
+        #seat-1 { top: 70px;  left: 8px; }
+        #seat-2 { top: 70px;  right: 8px; }
+        #seat-3 { top: 230px; right: 40px; }
+        #seat-4 { bottom: 8px; left: 50%; transform: translate(-50%, 0); }
+        #seat-5 { top: 230px; left: 40px; }
+
         .board-row {
             position: absolute;
             top: 50%;
@@ -137,6 +164,34 @@
 
     <div class="table-wrapper">
         <div class="table-outer">
+
+            <!-- Seat boxes around the table -->
+            <div class="seat" id="seat-0">
+                <span class="seat-title">Hero AI</span>
+                <span class="seat-line" id="seat-0-line">Chips: –</span>
+            </div>
+            <div class="seat" id="seat-1">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-1-line">–</span>
+            </div>
+            <div class="seat" id="seat-2">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-2-line">–</span>
+            </div>
+            <div class="seat" id="seat-3">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-3-line">–</span>
+            </div>
+            <div class="seat" id="seat-4">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-4-line">–</span>
+            </div>
+            <div class="seat" id="seat-5">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-5-line">–</span>
+            </div>
+
+            <!-- Board in the centre -->
             <div class="board-row">
                 <div class="board-card" id="board-0">?</div>
                 <div class="board-card" id="board-1">?</div>
@@ -200,6 +255,36 @@
             }
         }
 
+        function resetSeats() {
+            for (let s = 0; s <= 5; s++) {
+                const seatBox = document.getElementById("seat-" + s);
+                const line = document.getElementById("seat-" + s + "-line");
+                if (!seatBox || !line) continue;
+                if (s === 0) {
+                    seatBox.querySelector(".seat-title").textContent = "Hero AI";
+                    line.textContent = "Chips: –";
+                } else {
+                    seatBox.querySelector(".seat-title").textContent = "Empty";
+                    line.textContent = "–";
+                }
+            }
+        }
+
+        function updateSeats(players, currentSeat) {
+            resetSeats();
+            players.forEach(p => {
+                const id = "seat-" + p.seat;
+                const el = document.getElementById(id);
+                const line = document.getElementById(id + "-line");
+                if (!el || !line) return;
+                el.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
+                let txt = "Chips: " + (p.chips ?? "-");
+                if (p.folded) txt += " (folded)";
+                if (currentSeat === p.seat) txt += " – To act";
+                line.textContent = txt;
+            });
+        }
+
         document.getElementById("join-btn").addEventListener("click", () => {
             const name = document.getElementById("name-input").value.trim() || "Guest";
             socket.emit("join_table", { name });
@@ -219,6 +304,7 @@
             document.getElementById("pot-text").textContent = data.pot ?? 0;
             document.getElementById("street-text").textContent = data.street || "-";
             updateBoard(data.board || []);
+            updateSeats(data.players || [], data.current_player_seat);
         });
 
         socket.on("hole_cards", data => {
@@ -254,7 +340,6 @@
             const amt = parseInt(document.getElementById("raise-amount").value || "0", 10);
             if (amt > 0) sendAction("RAISE", amt);
         });
-
     </script>
 </body>
 </html>
