@@ -46,6 +46,10 @@
             background-color: #2f6bb3;
             color: #fff;
         }
+        #update-board-btn {
+            background-color: #c58a20;
+            color: #fff;
+        }
 
         .mode-pill {
             padding: 4px 8px;
@@ -105,42 +109,18 @@
             opacity: 0.85;
         }
 
-        /* Seat positions – 7 seats around the oval (same for hero and player) */
-        #seat-0 {            /* Hero AI – top centre */
+        /* Seat positions – 7 seats around the oval */
+        #seat-0 {
             top: 22px;
             left: 50%;
             transform: translateX(-50%);
         }
-
-        #seat-1 {            /* top-left */
-            top: 70px;
-            left: 90px;
-        }
-
-        #seat-2 {            /* top-right */
-            top: 70px;
-            right: 90px;
-        }
-
-        #seat-3 {            /* right-middle */
-            top: 170px;
-            right: 35px;
-        }
-
-        #seat-4 {            /* bottom-right */
-            bottom: 55px;
-            right: 110px;
-        }
-
-        #seat-5 {            /* bottom-left */
-            bottom: 55px;
-            left: 110px;
-        }
-
-        #seat-6 {            /* left-middle */
-            top: 170px;
-            left: 35px;
-        }
+        #seat-1 { top: 70px; left: 90px; }
+        #seat-2 { top: 70px; right: 90px; }
+        #seat-3 { top: 170px; right: 35px; }
+        #seat-4 { bottom: 55px; right: 110px; }
+        #seat-5 { bottom: 55px; left: 110px; }
+        #seat-6 { top: 170px; left: 35px; }
 
         .board-row {
             position: absolute;
@@ -272,8 +252,8 @@
         <button id="start-hand-btn">Start Hand</button>
         <button id="reset-btn">Reset</button>
         <button id="download-csv-btn">Download CSV</button>
+        <button id="update-board-btn">Update Board</button>
 
-        <!-- Hero Auto/Manual mode controls -->
         <span class="mode-pill">
             Mode:
             <button id="mode-auto-btn" class="mode-btn active">Auto</button>
@@ -338,7 +318,6 @@
             <div class="panel-line">Amount: <span id="ai-amount">–</span></div>
             <div class="panel-line">Reason: <span id="ai-reason">–</span></div>
 
-            <!-- Hero Action controls (manual mode) -->
             <div class="hero-action-row">
                 <button id="hero-fold-btn">Fold</button>
                 <button id="hero-checkcall-btn">Check / Call</button>
@@ -378,9 +357,8 @@
     <script>
         const socket = io();
 
-        // --- Hero mode state ---
-        let heroMode = "auto";         // "auto" or "manual"
-        let lastHeroDecision = null;   // store last AI suggestion
+        let heroMode = "auto";
+        let lastHeroDecision = null;
 
         const modeAutoBtn   = document.getElementById("mode-auto-btn");
         const modeManualBtn = document.getElementById("mode-manual-btn");
@@ -444,7 +422,7 @@
 
         function updateSeats(players, currentSeat) {
             resetSeats();
-            players.forEach(p => {
+            (players || []).forEach(p => {
                 const id = "seat-" + p.seat;
                 const el = document.getElementById(id);
                 const line = document.getElementById(id + "-line");
@@ -473,7 +451,6 @@
             const body = document.getElementById("player-stats-body");
             body.innerHTML = "";
             (stats || []).forEach(p => {
-                // Support both shapes: from players[] or from stats_update[]
                 const hands = p.hands_played ?? p.hands ?? 0;
                 const vpip  = p.vpip_pct ?? p.vpip ?? 0;
                 const pfr   = p.pfr_pct ?? p.pfr ?? 0;
@@ -493,9 +470,12 @@
             socket.emit("hero_join", {});
         });
 
-        // Optional: when server confirms hero joined, make sure we start in auto mode.
-        socket.on("hero_joined", () => {
-            setModeButtons("auto");
+        socket.on("hero_joined", data => {
+            if (data && data.mode) {
+                setModeButtons(data.mode);
+            } else {
+                setModeButtons("auto");
+            }
         });
 
         document.getElementById("start-hand-btn").addEventListener("click", () => {
@@ -517,9 +497,7 @@
         });
 
         document.getElementById("reset-btn").addEventListener("click", () => {
-            // Keep the same event name you used earlier
             socket.emit("reset_table");
-            // Local UI reset
             updateBoard([]);
             document.getElementById("pot-text").textContent = "0";
             document.getElementById("street-text").textContent = "-";
@@ -535,8 +513,24 @@
         });
 
         document.getElementById("download-csv-btn").addEventListener("click", () => {
-            // Keep your original route name
             window.location.href = "/download_csv";
+        });
+
+        document.getElementById("update-board-btn").addEventListener("click", () => {
+            const flop = document.getElementById("flop-input").value.trim();
+            const turn = document.getElementById("turn-input").value.trim();
+            const river = document.getElementById("river-input").value.trim();
+
+            let boardCards = [];
+            if (flop) boardCards = boardCards.concat(flop.split(/\s+/));
+            if (turn) boardCards.push(turn);
+            if (river) boardCards.push(river);
+            const boardStr = boardCards.join(" ");
+            if (!boardStr) return;
+
+            socket.emit("hero_set_board", {
+                board_cards: boardStr
+            });
         });
 
         socket.on("table_state", data => {
@@ -544,11 +538,8 @@
             document.getElementById("street-text").textContent = data.street || "-";
             updateBoard(data.board || []);
             updateSeats(data.players || [], data.current_player_seat);
-            // If stats are embedded in players (older version), this will still work:
-            updateStats(data.players || []);
         });
 
-        // If server sends a dedicated stats_update event (newer backend), use it:
         socket.on("stats_update", data => {
             const stats = (data && data.stats) || [];
             updateStats(stats);
@@ -587,17 +578,17 @@
             const ul = document.getElementById("last-result-list");
             ul.innerHTML = "";
             players.forEach(p => {
-                const li = document.createElement("li");
                 const cardsPretty = prettyCardList(p.hole_cards || []);
-                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${p.folded ? "(folded)" : ""}`;
+                const winnerTag = p.winner ? "<strong> (WINNER)</strong>" : "";
+                const foldedTag = p.folded ? "(folded)" : "";
+                const li = document.createElement("li");
+                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${foldedTag} ${winnerTag}`;
                 ul.appendChild(li);
             });
         });
 
-        // --- Hero manual action handlers (only work in manual mode) ---
-
         function sendHeroAction(action, amount) {
-            if (heroMode !== "manual") return;  // ignore clicks in auto mode
+            if (heroMode !== "manual") return;
             socket.emit("hero_action", {
                 action: action,
                 amount: amount || 0
@@ -609,7 +600,6 @@
         });
 
         heroCheckCallBtn.addEventListener("click", () => {
-            // Server will interpret CALL with 0 as CHECK when to_call == 0
             sendHeroAction("CALL", 0);
         });
 
