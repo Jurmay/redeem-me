@@ -4,6 +4,9 @@ import os
 import random
 import io
 import csv
+import json
+import time
+import uuid
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "secret!"
@@ -13,6 +16,7 @@ socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
 TABLE_ROOM = "table_main"
 HERO_SEAT = 0
+HAND_LOG_PATH = "hand_logs.jsonl"   # detailed AI-training log
 
 
 class PlayerStats:
@@ -54,8 +58,11 @@ class GameState:
         self.hand_running = False
 
         # history and stats
-        self.hand_history = []  # list of finished hands
+        self.hand_history = []  # list of finished hands (for CSV)
         self.stats = {}         # seat -> PlayerStats
+
+        # detailed per-hand log for AI training
+        self.current_hand_log = None   # dict, written to HAND_LOG_PATH at hand end
 
 
 game = GameState()
@@ -136,6 +143,24 @@ def broadcast_stats():
     socketio.emit("stats_update", {"stats": stats_view}, room=TABLE_ROOM)
 
 
+def finalize_and_save_hand_log(note):
+    """Write the detailed per-hand log to JSONL for AI training."""
+    if game.current_hand_log is None:
+        return
+    try:
+        log = game.current_hand_log
+        log["timestamp_end"] = time.time()
+        log["final_board"] = list(game.board)
+        log["final_stacks"] = {p.name: p.chips for p in game.players}
+        log["note"] = note
+        with open(HAND_LOG_PATH, "a") as f:
+            f.write(json.dumps(log) + "\n")
+    except Exception as e:
+        print("Error writing detailed hand log:", e)
+    finally:
+        game.current_hand_log = None
+
+
 def reset_game():
     global game, sid_to_seat
     game = GameState()
@@ -151,6 +176,25 @@ def deal_new_hand(hero_cards=None, board_cards=None):
         p.chips = 1000
         p.folded = False
         p.hole_cards = []
+
+    # Initialize detailed hand log for AI training
+    game.current_hand_log = {
+        "hand_id": str(uuid.uuid4()),
+        "timestamp_start": time.time(),
+        "players": [
+            {
+                "seat": p.seat,
+                "name": p.name,
+                "is_hero": p.is_hero,
+                "starting_chips": p.chips,
+            } for p in game.players
+        ],
+        "hero_hole_cards": [],
+        "board_flop": [],
+        "board_turn": [],
+        "board_river": [],
+        "actions": [],
+    }
 
     game.deck = make_deck()
     game.pot = 0
@@ -187,6 +231,11 @@ def deal_new_hand(hero_cards=None, board_cards=None):
             game.stats[p.seat] = PlayerStats()
         game.stats[p.seat].hands_played += 1
 
+    # Store hero hole cards in the detailed log
+    hero = find_player_by_seat(HERO_SEAT)
+    if hero and game.current_hand_log is not None:
+        game.current_hand_log["hero_hole_cards"] = list(hero.hole_cards)
+
     # Preflop: nothing on board yet
     game.board = []
     seats = active_seats()
@@ -199,7 +248,6 @@ def deal_new_hand(hero_cards=None, board_cards=None):
             socketio.emit("hole_cards", {"cards": p.hole_cards}, room=p.sid)
 
     # Hero cards broadcast (only hero.html will show them)
-    hero = find_player_by_seat(HERO_SEAT)
     if hero:
         socketio.emit("hero_hole_cards", {"cards": hero.hole_cards}, room=TABLE_ROOM)
 
@@ -214,14 +262,21 @@ def next_street_or_showdown():
     if game.street == "preflop":
         game.street = "flop"
         game.board = game.full_board[:3]
+        if game.current_hand_log is not None:
+            game.current_hand_log["board_flop"] = list(game.board)
     elif game.street == "flop":
         game.street = "turn"
         game.board = game.full_board[:4]
+        if game.current_hand_log is not None:
+            game.current_hand_log["board_turn"] = list(game.board)
     elif game.street == "turn":
         game.street = "river"
         game.board = game.full_board[:5]
+        if game.current_hand_log is not None:
+            game.current_hand_log["board_river"] = list(game.board)
     else:
         # Showdown – reveal all hands and finish (no winner calc yet).
+        note_text = "Showdown – winner not auto-calculated in this demo."
         result = {
             "board": list(game.board),
             "players": [
@@ -232,9 +287,10 @@ def next_street_or_showdown():
                     "folded": p.folded,
                 } for p in game.players
             ],
-            "note": "Showdown – winner not auto-calculated in this demo.",
+            "note": note_text,
         }
         record_hand(result)
+        finalize_and_save_hand_log(note_text)
         socketio.emit("hand_result", result, room=TABLE_ROOM)
         game.hand_running = False
         broadcast_state()
@@ -363,6 +419,10 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
     is_preflop = (game.street == "preflop")
     stats = game.stats.get(seat)
 
+    # snapshot before for logging
+    pot_before = game.pot
+    chips_before = player.chips
+
     if action == "FOLD":
         player.folded = True
         game.to_act.discard(seat)
@@ -401,9 +461,30 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
         # Others must act again
         game.to_act = set(s for s in active_seats() if s != seat)
 
+    # Detailed per-action logging for AI training
+    if game.current_hand_log is not None:
+        try:
+            game.current_hand_log["actions"].append({
+                "time": time.time(),
+                "street": game.street,
+                "player_seat": seat,
+                "player_name": player.name,
+                "is_hero": player.is_hero,
+                "action": action,
+                "declared_amount": amount,
+                "pot_before": pot_before,
+                "pot_after": game.pot,
+                "chips_before": chips_before,
+                "chips_after": player.chips,
+                "current_bet_after": game.current_bet,
+            })
+        except Exception as e:
+            print("Error logging action:", e)
+
     # If only one left, end hand immediately
     remaining = [s for s in active_seats()]
     if len(remaining) <= 1 and game.hand_running:
+        note_text = "Hand ended because all but one player folded."
         result = {
             "board": list(game.board),
             "players": [
@@ -414,9 +495,10 @@ def apply_action(player, action, amount, is_hero=False, reason=None):
                     "folded": p.folded,
                 } for p in game.players
             ],
-            "note": "Hand ended because all but one player folded.",
+            "note": note_text,
         }
         record_hand(result)
+        finalize_and_save_hand_log(note_text)
         socketio.emit("hand_result", result, room=TABLE_ROOM)
         game.hand_running = False
         broadcast_state()
