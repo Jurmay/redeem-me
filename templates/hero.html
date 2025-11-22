@@ -1,869 +1,629 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Hero Console – Poker AI</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8" />
+    <title>Poker Hero (AI Coach)</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(circle at top, #003b25, #00130f 60%, #000000 100%);
+            color: #f5f5f5;
+        }
+        .top-bar {
+            padding: 16px;
+            text-align: center;
+        }
+        h1 {
+            margin: 8px 0 16px;
+        }
+        input[type="text"] {
+            padding: 6px 8px;
+            margin: 0 4px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #0e2b23;
+            color: #f5f5f5;
+        }
+        button {
+            padding: 6px 14px;
+            margin-left: 6px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #start-hand-btn {
+            background-color: #1e8c3a;
+            color: #fff;
+        }
+        #reset-btn {
+            background-color: #b3472f;
+            color: #fff;
+        }
+        #download-csv-btn {
+            background-color: #2f6bb3;
+            color: #fff;
+        }
 
-    body {
-      background: #101318;
-      color: #f5f5f5;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      padding: 20px;
-    }
+        .mode-pill {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #08241b;
+            border: 1px solid #1f4634;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .mode-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-left: 4px;
+            border-radius: 999px;
+            border: 1px solid #666;
+            background: #122920;
+            color: #f5f5f5;
+        }
+        .mode-btn.active {
+            background: #1e8c3a;
+            border-color: #3dd86b;
+            color: #fff;
+        }
+        .mode-btn.inactive {
+            opacity: 0.5;
+        }
 
-    .container {
-      width: 1100px;
-      background: #171a21;
-      border-radius: 10px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.8);
-      padding: 16px 18px 20px;
-      display: grid;
-      grid-template-columns: 2fr 1.4fr;
-      grid-gap: 14px;
-    }
+        .table-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .table-outer {
+            width: 700px;
+            height: 370px;
+            border-radius: 50%;
+            border: 6px solid #a35a2a;
+            background: radial-gradient(circle at top, #13542f, #06321a 65%, #04180f);
+            position: relative;
+        }
+        .seat {
+            position: absolute;
+            width: 130px;
+            padding: 6px 8px;
+            background: #020b0a;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+            font-size: 12px;
+            text-align: left;
+        }
+        .seat-title {
+            font-weight: 700;
+            display: block;
+        }
+        .seat-line {
+            font-size: 11px;
+            opacity: 0.85;
+        }
 
-    .section {
-      background: #1d2129;
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-    }
+        /* Seat positions – 7 seats around the oval (same for hero and player) */
+        #seat-0 {            /* Hero AI – top centre */
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
 
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #9ea4b3;
-    }
+        #seat-1 {            /* top-left */
+            top: 70px;
+            left: 90px;
+        }
 
-    .section-header span {
-      font-weight: 500;
-    }
+        #seat-2 {            /* top-right */
+            top: 70px;
+            right: 90px;
+        }
 
-    h1 {
-      font-size: 18px;
-      margin-bottom: 6px;
-    }
+        #seat-3 {            /* right-middle */
+            top: 170px;
+            right: 35px;
+        }
 
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
+        #seat-4 {            /* bottom-right */
+            bottom: 55px;
+            right: 110px;
+        }
 
-    .btn {
-      border: none;
-      outline: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 13px;
-      cursor: pointer;
-      background: #2b3240;
-      color: #f5f5f5;
-      transition: background 0.15s, transform 0.05s;
-      margin-right: 6px;
-    }
+        #seat-5 {            /* bottom-left */
+            bottom: 55px;
+            left: 110px;
+        }
 
-    .btn:last-child {
-      margin-right: 0;
-    }
+        #seat-6 {            /* left-middle */
+            top: 170px;
+            left: 35px;
+        }
 
-    .btn:hover {
-      background: #394154;
-    }
+        .board-row {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 8px;
+        }
+        .board-card {
+            width: 60px;
+            height: 80px;
+            border-radius: 8px;
+            border: 2px solid #1d3d32;
+            background: linear-gradient(135deg, #0f2720, #16382d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 8px rgba(0,0,0,0.7);
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .center-info {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, 0);
+            text-align: center;
+            font-size: 12px;
+        }
 
-    .btn:active {
-      transform: translateY(1px);
-    }
+        .card-rank {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .card-suit {
+            margin-left: 2px;
+            font-size: 20px;
+        }
+        .red-suit {
+            color: #ff4d4d;
+        }
+        .black-suit {
+            color: #f5f5f5;
+        }
 
-    .btn-primary {
-      background: #2563eb;
-    }
+        .panel-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+            gap: 12px;
+        }
+        .panel {
+            width: 30%;
+            min-height: 80px;
+            background: #040f0d;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        .panel-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .panel-line {
+            margin: 2px 0;
+        }
 
-    .btn-primary:hover {
-      background: #1e4fba;
-    }
+        .hero-action-row {
+            margin-top: 4px;
+            font-size: 12px;
+        }
+        .hero-action-row button {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        .hero-action-row input {
+            width: 50px;
+            padding: 2px 4px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        .hint-text {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
 
-    .btn-danger {
-      background: #b91c1c;
-    }
-
-    .btn-danger:hover {
-      background: #991b1b;
-    }
-
-    .btn-pill {
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 12px;
-    }
-
-    .btn-small {
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid #3b4251;
-    }
-
-    .btn.disabled,
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-
-    .field-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 6px;
-      gap: 6px;
-    }
-
-    label {
-      font-size: 12px;
-      color: #9ea4b3;
-    }
-
-    input[type="text"],
-    input[type="number"] {
-      background: #11141b;
-      border-radius: 6px;
-      border: 1px solid #2b3240;
-      padding: 5px 7px;
-      font-size: 12px;
-      color: #f5f5f5;
-      outline: none;
-      min-width: 0;
-    }
-
-    input[type="text"]:focus,
-    input[type="number"]:focus {
-      border-color: #2563eb;
-    }
-
-    .table-board {
-      text-align: center;
-      padding: 8px 6px 10px;
-      border-radius: 8px;
-      background: radial-gradient(circle at center, #234c34 0, #15251b 55%, #101318 100%);
-      margin-bottom: 6px;
-    }
-
-    .board-row {
-      display: flex;
-      justify-content: center;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    .card {
-      width: 40px;
-      height: 56px;
-      border-radius: 6px;
-      background: #f5f5f5;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 16px;
-      color: #11141b;
-      position: relative;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    }
-
-    .card-rank {
-      font-size: 16px;
-      margin-bottom: -2px;
-    }
-
-    .card-suit {
-      font-size: 14px;
-    }
-
-    .card.empty {
-      background: rgba(0, 0, 0, 0.2);
-      color: #666f80;
-      box-shadow: none;
-    }
-
-    .board-meta {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #cbd0dd;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .pill {
-      background: rgba(15, 23, 42, 0.7);
-      border-radius: 999px;
-      padding: 2px 9px;
-      font-size: 11px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-    }
-
-    .players-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-gap: 6px;
-      margin-top: 4px;
-    }
-
-    .player-card {
-      background: #141822;
-      border-radius: 6px;
-      padding: 6px 7px;
-      font-size: 11px;
-      border: 1px solid transparent;
-      position: relative;
-    }
-
-    .player-card.hero {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
-    }
-
-    .player-card .name-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1px;
-    }
-
-    .player-card .name {
-      font-weight: 500;
-      font-size: 11px;
-    }
-
-    .player-card .seat {
-      font-size: 10px;
-      color: #9ea4b3;
-    }
-
-    .player-card .chips-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      margin-top: 1px;
-    }
-
-    .tag {
-      font-size: 10px;
-      border-radius: 999px;
-      padding: 1px 5px;
-      border: 1px solid #3b4251;
-      color: #e5e7eb;
-    }
-
-    .tag-folded {
-      border-color: #7f1d1d;
-      color: #fecaca;
-      background: rgba(127, 29, 29, 0.35);
-    }
-
-    .tag-acting {
-      border-color: #facc15;
-      color: #fef9c3;
-      background: rgba(234, 179, 8, 0.23);
-    }
-
-    .hero-panel {
-      margin-top: 4px;
-      border-top: 1px solid #262c3a;
-      padding-top: 6px;
-    }
-
-    .hero-cards-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .hero-cards-row .label {
-      font-size: 12px;
-      color: #9ea4b3;
-      min-width: 50px;
-    }
-
-    .hero-cards-row .card {
-      width: 44px;
-      height: 60px;
-    }
-
-    .info-line {
-      font-size: 11px;
-      color: #cbd0dd;
-      margin-top: 4px;
-    }
-
-    .info-line strong {
-      color: #e5e7eb;
-    }
-
-    .suggestion-box {
-      font-size: 12px;
-      background: #11141b;
-      border-radius: 6px;
-      border: 1px solid #323949;
-      padding: 6px 7px;
-      margin-top: 4px;
-      min-height: 42px;
-    }
-
-    .suggestion-main {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 3px;
-    }
-
-    .suggestion-action {
-      font-weight: 600;
-      font-size: 13px;
-    }
-
-    .suggestion-mode-pill {
-      font-size: 10px;
-      padding: 1px 7px;
-      border-radius: 999px;
-      border: 1px solid #3b4251;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .suggestion-reason {
-      font-size: 11px;
-      color: #9ea4b3;
-    }
-
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-
-    .hero-actions .btn {
-      min-width: 70px;
-    }
-
-    .stats-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-      margin-top: 4px;
-    }
-
-    .stats-table th,
-    .stats-table td {
-      padding: 3px 4px;
-      text-align: left;
-    }
-
-    .stats-table th {
-      color: #9ea4b3;
-      font-weight: 500;
-      border-bottom: 1px solid #262c3a;
-    }
-
-    .stats-table tr:nth-child(even) td {
-      background: #151927;
-    }
-
-    .stats-table tr:nth-child(odd) td {
-      background: #0f131d;
-    }
-
-    .log-box {
-      font-size: 11px;
-      background: #0f131b;
-      border-radius: 6px;
-      border: 1px solid #262c3a;
-      padding: 6px;
-      max-height: 220px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      line-height: 1.35;
-    }
-
-    .log-line {
-      margin-bottom: 2px;
-      color: #9ea4b3;
-    }
-
-    .log-line strong {
-      color: #e5e7eb;
-    }
-
-  </style>
+        .stats-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        table {
+            width: 700px;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #234238;
+            padding: 4px 6px;
+            text-align: center;
+        }
+        th {
+            background: #0d291e;
+            font-weight: 700;
+        }
+        tbody tr:nth-child(even) {
+            background: #031511;
+        }
+        tbody tr:nth-child(odd) {
+            background: #041c15;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <!-- LEFT COLUMN: TABLE + HERO -->
-    <div>
-      <div class="section">
-        <div class="top-bar">
-          <div>
-            <h1>Hero Console</h1>
-            <div style="font-size: 11px; color:#9ea4b3;">Seat 0 • Hero AI with Auto/Manual Toggle</div>
-          </div>
-          <div>
-            <button class="btn btn-pill btn-outline" id="btn-auto">Auto</button>
-            <button class="btn btn-pill btn-outline" id="btn-manual">Manual</button>
-          </div>
-        </div>
+    <div class="top-bar">
+        <h1>Texas Hold’em – Hero / AI Coach</h1>
+        Hero cards (e.g. As Kd):
+        <input type="text" id="hero-cards-input" placeholder="As Kd" />
+        Flop (e.g. Ah Kc 7d):
+        <input type="text" id="flop-input" placeholder="Ah Kc 7d" />
+        Turn (e.g. 2s):
+        <input type="text" id="turn-input" placeholder="2s" />
+        River (e.g. 3c):
+        <input type="text" id="river-input" placeholder="3c" />
+        <button id="start-hand-btn">Start Hand</button>
+        <button id="reset-btn">Reset</button>
+        <button id="download-csv-btn">Download CSV</button>
 
-        <div class="section" style="margin-top:6px;">
-          <div class="section-header">
-            <span>Hand Control</span>
-          </div>
-          <div class="field-row">
-            <label for="hero-cards-input">Hero cards</label>
-            <input id="hero-cards-input" type="text" placeholder="e.g. As Kd (optional)">
-          </div>
-          <div class="field-row">
-            <label for="board-cards-input">Board cards</label>
-            <input id="board-cards-input" type="text" placeholder="e.g. Ah Kc 7d 2s 3c (optional)">
-          </div>
-          <div style="margin-top:4px;">
-            <button class="btn btn-primary btn-small" id="btn-start">Start Hand</button>
-            <button class="btn btn-small" id="btn-reset">Reset Table</button>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <span>Table</span>
-            <span id="label-hero-mode">Mode: Auto</span>
-          </div>
-
-          <div class="table-board">
-            <div class="board-row" id="board-cards"></div>
-            <div class="board-meta">
-              <div class="pill" id="label-street">Street: -</div>
-              <div class="pill" id="label-pot">Pot: 0</div>
-            </div>
-          </div>
-
-          <div class="players-grid" id="players-grid"></div>
-
-          <div class="hero-panel">
-            <div class="hero-cards-row">
-              <div class="label">Hero:</div>
-              <div id="hero-cards-display">
-                <!-- hero cards rendered here -->
-              </div>
-            </div>
-            <div class="info-line" id="info-current-player">
-              Waiting for game state…
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <span>AI Suggestion & Hero Action</span>
-          </div>
-
-          <div class="suggestion-box">
-            <div class="suggestion-main">
-              <div class="suggestion-action" id="suggestion-action">No suggestion yet.</div>
-              <div class="suggestion-mode-pill" id="suggestion-mode-pill">AUTO</div>
-            </div>
-            <div class="suggestion-reason" id="suggestion-reason">
-              When it's Hero's turn, the AI suggestion will appear here.
-            </div>
-          </div>
-
-          <div class="hero-actions">
-            <button class="btn btn-small btn-danger" id="btn-fold" disabled>Fold</button>
-            <button class="btn btn-small" id="btn-check-call" disabled>Check / Call</button>
-            <div style="display:flex;align-items:center;gap:4px;">
-              <button class="btn btn-small btn-primary" id="btn-raise" disabled>Raise</button>
-              <input type="number" id="raise-amount" placeholder="Amt" min="1" style="width:70px;">
-            </div>
-            <div style="font-size:11px;color:#9ea4b3;">
-              Manual mode: choose your action. Auto mode: buttons disabled.
-            </div>
-          </div>
-        </div>
-      </div>
+        <!-- Hero Auto/Manual mode controls -->
+        <span class="mode-pill">
+            Mode:
+            <button id="mode-auto-btn" class="mode-btn active">Auto</button>
+            <button id="mode-manual-btn" class="mode-btn inactive">Manual</button>
+        </span>
     </div>
 
-    <!-- RIGHT COLUMN: STATS + LOG -->
-    <div>
-      <div class="section">
-        <div class="section-header">
-          <span>Player Stats</span>
-          <span>VPIP / PFR</span>
+    <div class="table-wrapper">
+        <div class="table-outer">
+            <div class="seat" id="seat-0">
+                <span class="seat-title">Hero AI</span>
+                <span class="seat-line" id="seat-0-line">Chips: –</span>
+            </div>
+            <div class="seat" id="seat-1">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-1-line">–</span>
+            </div>
+            <div class="seat" id="seat-2">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-2-line">–</span>
+            </div>
+            <div class="seat" id="seat-3">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-3-line">–</span>
+            </div>
+            <div class="seat" id="seat-4">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-4-line">–</span>
+            </div>
+            <div class="seat" id="seat-5">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-5-line">–</span>
+            </div>
+            <div class="seat" id="seat-6">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-6-line">–</span>
+            </div>
+
+            <div class="board-row">
+                <div class="board-card" id="board-0">?</div>
+                <div class="board-card" id="board-1">?</div>
+                <div class="board-card" id="board-2">?</div>
+                <div class="board-card" id="board-3">?</div>
+                <div class="board-card" id="board-4">?</div>
+            </div>
+
+            <div class="center-info">
+                <div>Pot: <span id="pot-text">0</span></div>
+                <div>Street: <span id="street-text">-</span></div>
+            </div>
         </div>
-        <table class="stats-table" id="stats-table">
-          <thead>
-            <tr>
-              <th>Seat</th>
-              <th>Name</th>
-              <th>Hands</th>
-              <th>VPIP%</th>
-              <th>PFR%</th>
-            </tr>
-          </thead>
-          <tbody>
-          <!-- stats rows -->
-          </tbody>
+    </div>
+
+    <div class="panel-row">
+        <div class="panel">
+            <div class="panel-title">Hero Hand</div>
+            <div class="panel-line">Cards: <span id="hero-hand-cards">–</span></div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">AI Decision</div>
+            <div class="panel-line">Action: <span id="ai-action">–</span></div>
+            <div class="panel-line">Amount: <span id="ai-amount">–</span></div>
+            <div class="panel-line">Reason: <span id="ai-reason">–</span></div>
+
+            <!-- Hero Action controls (manual mode) -->
+            <div class="hero-action-row">
+                <button id="hero-fold-btn">Fold</button>
+                <button id="hero-checkcall-btn">Check / Call</button>
+                <input type="number" id="hero-raise-amount" value="20" min="1" />
+                <button id="hero-raise-btn">Raise</button>
+            </div>
+            <div class="hint-text">
+                In <strong>manual</strong> mode, click an action above to apply it.  
+                In <strong>auto</strong> mode, the AI acts automatically.
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">Last Hand Result</div>
+            <div class="panel-line" id="last-result-board">Board: –</div>
+            <div class="panel-line" id="last-result-note">Note: –</div>
+            <ul id="last-result-list"></ul>
+        </div>
+    </div>
+
+    <div class="stats-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Seat</th>
+                    <th>Name</th>
+                    <th>Hands</th>
+                    <th>VPIP %</th>
+                    <th>PFR %</th>
+                </tr>
+            </thead>
+            <tbody id="player-stats-body">
+                <!-- Filled by JS -->
+            </tbody>
         </table>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <span>Event Log</span>
-        </div>
-        <div class="log-box" id="log-box"></div>
-      </div>
     </div>
-  </div>
 
-  <!-- Socket.IO -->
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
-          integrity="sha384-vtKq+W3r5pIDxVf8Xfqs21WX5Kqbn8LPfqf7H+G+uKSRbH0L4/8SmhV9hE2Yxw+k"
-          crossorigin="anonymous"></script>
-  <script>
-    const socket = io();
+    <script>
+        const socket = io();
 
-    const btnStart = document.getElementById('btn-start');
-    const btnReset = document.getElementById('btn-reset');
-    const btnAuto = document.getElementById('btn-auto');
-    const btnManual = document.getElementById('btn-manual');
+        // --- Hero mode state ---
+        let heroMode = "auto";         // "auto" or "manual"
+        let lastHeroDecision = null;   // store last AI suggestion
 
-    const heroCardsInput = document.getElementById('hero-cards-input');
-    const boardCardsInput = document.getElementById('board-cards-input');
+        const modeAutoBtn   = document.getElementById("mode-auto-btn");
+        const modeManualBtn = document.getElementById("mode-manual-btn");
 
-    const boardCardsDiv = document.getElementById('board-cards');
-    const playersGrid = document.getElementById('players-grid');
-    const heroCardsDisplay = document.getElementById('hero-cards-display');
-    const labelStreet = document.getElementById('label-street');
-    const labelPot = document.getElementById('label-pot');
-    const labelHeroMode = document.getElementById('label-hero-mode');
-    const infoCurrentPlayer = document.getElementById('info-current-player');
+        const heroFoldBtn      = document.getElementById("hero-fold-btn");
+        const heroCheckCallBtn = document.getElementById("hero-checkcall-btn");
+        const heroRaiseBtn     = document.getElementById("hero-raise-btn");
+        const heroRaiseInput   = document.getElementById("hero-raise-amount");
 
-    const suggestionAction = document.getElementById('suggestion-action');
-    const suggestionReason = document.getElementById('suggestion-reason');
-    const suggestionModePill = document.getElementById('suggestion-mode-pill');
-
-    const btnFold = document.getElementById('btn-fold');
-    const btnCheckCall = document.getElementById('btn-check-call');
-    const btnRaise = document.getElementById('btn-raise');
-    const raiseAmountInput = document.getElementById('raise-amount');
-
-    const statsTableBody = document.querySelector('#stats-table tbody');
-    const logBox = document.getElementById('log-box');
-
-    let currentHeroMode = 'auto';      // "auto" | "manual"
-    let lastHeroSuggestion = null;     // { action, amount, reason, mode }
-
-    // --- Utility: card rendering ---
-
-    function renderCard(code) {
-      if (!code || code.length < 2) {
-        const div = document.createElement('div');
-        div.className = 'card empty';
-        div.textContent = '';
-        return div;
-      }
-      const rank = code[0];
-      const suitChar = code[1];
-      let suitSymbol = '?';
-      let color = '#11141b';
-      if (suitChar === 'h') { suitSymbol = '♥'; color = '#b91c1c'; }
-      else if (suitChar === 'd') { suitSymbol = '♦'; color = '#b91c1c'; }
-      else if (suitChar === 'c') { suitSymbol = '♣'; color = '#11141b'; }
-      else if (suitChar === 's') { suitSymbol = '♠'; color = '#11141b'; }
-
-      const div = document.createElement('div');
-      div.className = 'card';
-      const rankSpan = document.createElement('div');
-      rankSpan.className = 'card-rank';
-      rankSpan.textContent = rank;
-      const suitSpan = document.createElement('div');
-      suitSpan.className = 'card-suit';
-      suitSpan.textContent = suitSymbol;
-      suitSpan.style.color = color;
-      div.appendChild(rankSpan);
-      div.appendChild(suitSpan);
-      return div;
-    }
-
-    function appendLog(text) {
-      const line = document.createElement('div');
-      line.className = 'log-line';
-      line.innerHTML = text;
-      logBox.appendChild(line);
-      logBox.scrollTop = logBox.scrollHeight;
-    }
-
-    function setHeroModeUI(mode) {
-      currentHeroMode = mode;
-      labelHeroMode.textContent = 'Mode: ' + (mode === 'auto' ? 'Auto' : 'Manual');
-      suggestionModePill.textContent = mode.toUpperCase();
-
-      // Toggle button styles
-      if (mode === 'auto') {
-        btnAuto.classList.add('btn-primary');
-        btnManual.classList.remove('btn-primary');
-      } else {
-        btnManual.classList.add('btn-primary');
-        btnAuto.classList.remove('btn-primary');
-      }
-
-      // Enable/disable manual action buttons
-      const disabled = (mode === 'auto');
-      btnFold.disabled = disabled;
-      btnCheckCall.disabled = disabled;
-      btnRaise.disabled = disabled;
-    }
-
-    // --- Socket.IO events ---
-
-    socket.on('connect', () => {
-      appendLog('<strong>Connected</strong> to server.');
-      socket.emit('hero_join', {});
-    });
-
-    socket.on('hero_joined', (data) => {
-      appendLog('Hero joined the table.');
-      if (data && data.mode) {
-        setHeroModeUI(data.mode);
-      } else {
-        setHeroModeUI('auto');
-      }
-    });
-
-    socket.on('hero_mode', (data) => {
-      if (!data || !data.mode) return;
-      setHeroModeUI(data.mode);
-      appendLog('Hero mode set to <strong>' + data.mode.toUpperCase() + '</strong>.');
-    });
-
-    socket.on('table_state', (data) => {
-      if (!data) return;
-
-      // Street & pot
-      const street = data.street || '-';
-      const pot = data.pot || 0;
-      labelStreet.textContent = 'Street: ' + street;
-      labelPot.textContent = 'Pot: ' + pot;
-
-      // Board
-      boardCardsDiv.innerHTML = '';
-      const board = data.board || [];
-      for (let i = 0; i < 5; i++) {
-        const cardCode = board[i];
-        boardCardsDiv.appendChild(renderCard(cardCode));
-      }
-
-      // Players
-      playersGrid.innerHTML = '';
-      const players = data.players || [];
-      const currentSeat = data.current_player_seat;
-      players.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'player-card';
-        if (p.is_hero) card.classList.add('hero');
-
-        const nameRow = document.createElement('div');
-        nameRow.className = 'name-row';
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'name';
-        nameDiv.textContent = p.name + (p.is_hero ? ' (Hero)' : '');
-        const seatDiv = document.createElement('div');
-        seatDiv.className = 'seat';
-        seatDiv.textContent = 'Seat ' + p.seat;
-        nameRow.appendChild(nameDiv);
-        nameRow.appendChild(seatDiv);
-
-        const chipsRow = document.createElement('div');
-        chipsRow.className = 'chips-row';
-        const chipsDiv = document.createElement('div');
-        chipsDiv.textContent = 'Chips: ' + p.chips;
-        const tagsDiv = document.createElement('div');
-
-        if (p.folded) {
-          const tag = document.createElement('span');
-          tag.className = 'tag tag-folded';
-          tag.textContent = 'Folded';
-          tagsDiv.appendChild(tag);
-        } else if (p.seat === currentSeat) {
-          const tag = document.createElement('span');
-          tag.className = 'tag tag-acting';
-          tag.textContent = 'To act';
-          tagsDiv.appendChild(tag);
+        function setModeButtons(mode) {
+            heroMode = mode;
+            if (mode === "auto") {
+                modeAutoBtn.classList.add("active");
+                modeAutoBtn.classList.remove("inactive");
+                modeManualBtn.classList.remove("active");
+                modeManualBtn.classList.add("inactive");
+            } else {
+                modeManualBtn.classList.add("active");
+                modeManualBtn.classList.remove("inactive");
+                modeAutoBtn.classList.remove("active");
+                modeAutoBtn.classList.add("inactive");
+            }
         }
 
-        chipsRow.appendChild(chipsDiv);
-        chipsRow.appendChild(tagsDiv);
+        modeAutoBtn.addEventListener("click", () => {
+            socket.emit("hero_set_mode", { mode: "auto" });
+        });
 
-        card.appendChild(nameRow);
-        card.appendChild(chipsRow);
-        playersGrid.appendChild(card);
-      });
+        modeManualBtn.addEventListener("click", () => {
+            socket.emit("hero_set_mode", { mode: "manual" });
+        });
 
-      // Info current player
-      if (currentSeat === null || currentSeat === undefined) {
-        infoCurrentPlayer.textContent = 'No active player to act.';
-      } else {
-        let who = 'Seat ' + currentSeat;
-        const hero = players.find(p => p.seat === 0);
-        if (hero && currentSeat === hero.seat) {
-          who = 'Hero (Seat 0)';
+        function prettyCard(card) {
+            if (!card || card.length < 2) return card || "";
+            const rank = card[0];
+            const suitChar = card[1].toLowerCase();
+            const suitMap = { h: "♥", d: "♦", c: "♣", s: "♠" };
+            const suit = suitMap[suitChar] || suitChar;
+            const isRed = (suitChar === "h" || suitChar === "d");
+            return `<span class="card-rank">${rank}</span><span class="card-suit ${isRed ? "red-suit" : "black-suit"}">${suit}</span>`;
         }
-        infoCurrentPlayer.textContent = 'Current player to act: ' + who;
-      }
 
-      // Mode from table state if present
-      if (data.hero_mode) {
-        setHeroModeUI(data.hero_mode);
-      }
-    });
-
-    socket.on('hero_hole_cards', (data) => {
-      const cards = (data && data.cards) || [];
-      heroCardsDisplay.innerHTML = '';
-      if (cards.length === 0) {
-        heroCardsDisplay.textContent = 'No cards yet.';
-        return;
-      }
-      cards.forEach(c => {
-        heroCardsDisplay.appendChild(renderCard(c));
-      });
-      appendLog('Hero hole cards: <strong>' + cards.join(' ') + '</strong>');
-    });
-
-    socket.on('hero_decision', (data) => {
-      if (!data) return;
-      lastHeroSuggestion = data;
-      const act = data.action || '-';
-      const amt = data.amount || 0;
-      const reason = data.reason || '';
-      const mode = data.mode || currentHeroMode;
-
-      suggestionAction.textContent = act + (act === 'RAISE' && amt ? ' to ' + amt : '');
-      suggestionReason.textContent = reason || 'AI suggested: ' + act;
-      suggestionModePill.textContent = mode.toUpperCase();
-
-      // If mode from server, sync UI
-      setHeroModeUI(mode);
-
-      appendLog('AI suggests: <strong>' + act + (act === 'RAISE' && amt ? ' to ' + amt : '') + '</strong>.');
-    });
-
-    socket.on('hand_result', (data) => {
-      appendLog('<strong>Hand finished</strong>. Board: ' + (data.board || []).join(' '));
-    });
-
-    socket.on('stats_update', (data) => {
-      const stats = (data && data.stats) || [];
-      statsTableBody.innerHTML = '';
-      stats.forEach(s => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${s.seat}</td>
-          <td>${s.name}</td>
-          <td>${s.hands_played}</td>
-          <td>${s.vpip_pct}</td>
-          <td>${s.pfr_pct}</td>
-        `;
-        statsTableBody.appendChild(tr);
-      });
-    });
-
-    socket.on('table_reset', () => {
-      appendLog('<strong>Table reset</strong>.');
-      boardCardsDiv.innerHTML = '';
-      playersGrid.innerHTML = '';
-      heroCardsDisplay.innerHTML = '';
-      labelStreet.textContent = 'Street: -';
-      labelPot.textContent = 'Pot: 0';
-      infoCurrentPlayer.textContent = 'Table reset. Start a new hand.';
-      suggestionAction.textContent = 'No suggestion yet.';
-      suggestionReason.textContent = 'When it\'s Hero\'s turn, the AI suggestion will appear here.';
-      lastHeroSuggestion = null;
-    });
-
-    // --- Button handlers ---
-
-    btnStart.addEventListener('click', () => {
-      const heroCards = heroCardsInput.value.trim();
-      const boardCards = boardCardsInput.value.trim();
-      socket.emit('hero_start_hand', {
-        hero_cards: heroCards || null,
-        board_cards: boardCards || null,
-      });
-      appendLog('Requested <strong>new hand</strong>.');
-    });
-
-    btnReset.addEventListener('click', () => {
-      socket.emit('hero_reset');
-    });
-
-    btnAuto.addEventListener('click', () => {
-      socket.emit('hero_set_mode', { mode: 'auto' });
-    });
-
-    btnManual.addEventListener('click', () => {
-      socket.emit('hero_set_mode', { mode: 'manual' });
-    });
-
-    btnFold.addEventListener('click', () => {
-      if (currentHeroMode !== 'manual') return;
-      socket.emit('hero_action', { action: 'FOLD', amount: 0 });
-      appendLog('Hero manually chose: <strong>FOLD</strong>.');
-    });
-
-    btnCheckCall.addEventListener('click', () => {
-      if (currentHeroMode !== 'manual') return;
-      // Server will interpret CALL or CHECK correctly depending on state;
-      // we send "CALL" but you can also choose "CHECK" if you prefer.
-      socket.emit('hero_action', { action: 'CALL', amount: 0 });
-      appendLog('Hero manually chose: <strong>CALL/CHECK</strong>.');
-    });
-
-    btnRaise.addEventListener('click', () => {
-      if (currentHeroMode !== 'manual') return;
-      let amt = parseInt(raiseAmountInput.value || '0', 10);
-      if (!amt || amt <= 0) {
-        // If no amount input, fall back to suggested amount if available
-        if (lastHeroSuggestion && lastHeroSuggestion.amount) {
-          amt = lastHeroSuggestion.amount;
-        } else {
-          amt = 20; // default
+        function prettyCardList(cards) {
+            return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
         }
-      }
-      socket.emit('hero_action', { action: 'RAISE', amount: amt });
-      appendLog('Hero manually chose: <strong>RAISE to ' + amt + '</strong>.');
-    });
 
-    // Initial UI state
-    setHeroModeUI('auto');
-  </script>
+        function resetSeats() {
+            for (let s = 0; s <= 6; s++) {
+                const seatBox = document.getElementById("seat-" + s);
+                const line = document.getElementById("seat-" + s + "-line");
+                if (!seatBox || !line) continue;
+                if (s === 0) {
+                    seatBox.querySelector(".seat-title").textContent = "Hero AI";
+                    line.textContent = "Chips: –";
+                } else {
+                    seatBox.querySelector(".seat-title").textContent = "Empty";
+                    line.textContent = "–";
+                }
+            }
+        }
+
+        function updateSeats(players, currentSeat) {
+            resetSeats();
+            players.forEach(p => {
+                const id = "seat-" + p.seat;
+                const el = document.getElementById(id);
+                const line = document.getElementById(id + "-line");
+                if (!el || !line) return;
+                el.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
+                let txt = "Chips: " + (p.chips ?? "-");
+                if (p.folded) txt += " (folded)";
+                if (currentSeat === p.seat) txt += " – To act";
+                line.textContent = txt;
+            });
+        }
+
+        function updateBoard(board) {
+            for (let i = 0; i < 5; i++) {
+                const el = document.getElementById("board-" + i);
+                const card = board && board[i] ? board[i] : "?";
+                if (card === "?") {
+                    el.textContent = "?";
+                } else {
+                    el.innerHTML = prettyCard(card);
+                }
+            }
+        }
+
+        function updateStats(stats) {
+            const body = document.getElementById("player-stats-body");
+            body.innerHTML = "";
+            (stats || []).forEach(p => {
+                // Support both shapes: from players[] or from stats_update[]
+                const hands = p.hands_played ?? p.hands ?? 0;
+                const vpip  = p.vpip_pct ?? p.vpip ?? 0;
+                const pfr   = p.pfr_pct ?? p.pfr ?? 0;
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${p.seat}</td>
+                    <td>${p.name}</td>
+                    <td>${hands}</td>
+                    <td>${vpip}</td>
+                    <td>${pfr}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        socket.on("connect", () => {
+            socket.emit("hero_join", {});
+        });
+
+        // Optional: when server confirms hero joined, make sure we start in auto mode.
+        socket.on("hero_joined", () => {
+            setModeButtons("auto");
+        });
+
+        document.getElementById("start-hand-btn").addEventListener("click", () => {
+            const heroCards = document.getElementById("hero-cards-input").value.trim();
+            const flop = document.getElementById("flop-input").value.trim();
+            const turn = document.getElementById("turn-input").value.trim();
+            const river = document.getElementById("river-input").value.trim();
+
+            let boardCards = [];
+            if (flop) boardCards = boardCards.concat(flop.split(/\s+/));
+            if (turn) boardCards.push(turn);
+            if (river) boardCards.push(river);
+            const boardStr = boardCards.join(" ");
+
+            socket.emit("hero_start_hand", {
+                hero_cards: heroCards || null,
+                board_cards: boardStr || null
+            });
+        });
+
+        document.getElementById("reset-btn").addEventListener("click", () => {
+            // Keep the same event name you used earlier
+            socket.emit("reset_table");
+            // Local UI reset
+            updateBoard([]);
+            document.getElementById("pot-text").textContent = "0";
+            document.getElementById("street-text").textContent = "-";
+            document.getElementById("hero-hand-cards").textContent = "–";
+            document.getElementById("ai-action").textContent = "–";
+            document.getElementById("ai-amount").textContent = "–";
+            document.getElementById("ai-reason").textContent = "–";
+            document.getElementById("last-result-board").textContent = "Board: –";
+            document.getElementById("last-result-note").textContent = "Note: –";
+            document.getElementById("last-result-list").innerHTML = "";
+            resetSeats();
+            document.getElementById("player-stats-body").innerHTML = "";
+        });
+
+        document.getElementById("download-csv-btn").addEventListener("click", () => {
+            // Keep your original route name
+            window.location.href = "/download_csv";
+        });
+
+        socket.on("table_state", data => {
+            document.getElementById("pot-text").textContent = data.pot ?? 0;
+            document.getElementById("street-text").textContent = data.street || "-";
+            updateBoard(data.board || []);
+            updateSeats(data.players || [], data.current_player_seat);
+            // If stats are embedded in players (older version), this will still work:
+            updateStats(data.players || []);
+        });
+
+        // If server sends a dedicated stats_update event (newer backend), use it:
+        socket.on("stats_update", data => {
+            const stats = (data && data.stats) || [];
+            updateStats(stats);
+        });
+
+        socket.on("hero_hole_cards", data => {
+            const cards = data.cards || [];
+            document.getElementById("hero-hand-cards").innerHTML = prettyCardList(cards);
+        });
+
+        socket.on("hero_decision", data => {
+            lastHeroDecision = data || null;
+            document.getElementById("ai-action").textContent = data.action || "-";
+            document.getElementById("ai-amount").textContent = data.amount ?? "–";
+            document.getElementById("ai-reason").textContent = data.reason || "-";
+
+            if (data && data.mode) {
+                setModeButtons(data.mode);
+            }
+        });
+
+        socket.on("hero_mode", data => {
+            if (!data || !data.mode) return;
+            setModeButtons(data.mode);
+        });
+
+        socket.on("hand_result", data => {
+            const board = data.board || [];
+            const players = data.players || [];
+            const note = data.note || "";
+
+            const boardPretty = board.map(prettyCard).join(" ");
+            document.getElementById("last-result-board").innerHTML = "Board: " + boardPretty;
+            document.getElementById("last-result-note").textContent = "Note: " + note;
+
+            const ul = document.getElementById("last-result-list");
+            ul.innerHTML = "";
+            players.forEach(p => {
+                const li = document.createElement("li");
+                const cardsPretty = prettyCardList(p.hole_cards || []);
+                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${p.folded ? "(folded)" : ""}`;
+                ul.appendChild(li);
+            });
+        });
+
+        // --- Hero manual action handlers (only work in manual mode) ---
+
+        function sendHeroAction(action, amount) {
+            if (heroMode !== "manual") return;  // ignore clicks in auto mode
+            socket.emit("hero_action", {
+                action: action,
+                amount: amount || 0
+            });
+        }
+
+        heroFoldBtn.addEventListener("click", () => {
+            sendHeroAction("FOLD", 0);
+        });
+
+        heroCheckCallBtn.addEventListener("click", () => {
+            // Server will interpret CALL with 0 as CHECK when to_call == 0
+            sendHeroAction("CALL", 0);
+        });
+
+        heroRaiseBtn.addEventListener("click", () => {
+            let amt = parseInt(heroRaiseInput.value || "0", 10);
+            if (!amt || amt <= 0) {
+                if (lastHeroDecision && lastHeroDecision.amount) {
+                    amt = lastHeroDecision.amount;
+                } else {
+                    amt = 20;
+                }
+            }
+            sendHeroAction("RAISE", amt);
+        });
+    </script>
 </body>
 </html>
