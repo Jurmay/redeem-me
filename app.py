@@ -64,6 +64,9 @@ class GameState:
         # detailed per-hand log for AI training
         self.current_hand_log = None   # dict, written to HAND_LOG_PATH at hand end
 
+        # hero mode: True = auto-play, False = manual (human clicks using AI suggestion)
+        self.hero_auto_play = True
+
 
 game = GameState()
 sid_to_seat = {}
@@ -105,6 +108,7 @@ def broadcast_state():
             } for p in game.players
         ],
         "current_player_seat": game.current_player_seat,
+        "hero_mode": "auto" if game.hero_auto_play else "manual",
     }
     socketio.emit("table_state", data, room=TABLE_ROOM)
 
@@ -341,11 +345,27 @@ def ask_for_action():
         ask_for_action()
         return
 
+    # HERO TURN
     if player.is_hero:
         decision = hero_ai_decision(player)
-        socketio.emit("hero_decision", decision, room=TABLE_ROOM)
-        apply_action(player, decision["action"], decision.get("amount", 0),
-                     is_hero=True, reason=decision["reason"])
+        # Always send suggestion to UI
+        payload = {
+            "action": decision["action"],
+            "amount": decision.get("amount", 0),
+            "reason": decision.get("reason", ""),
+            "mode": "auto" if game.hero_auto_play else "manual",
+        }
+        socketio.emit("hero_decision", payload, room=TABLE_ROOM)
+
+        if game.hero_auto_play:
+            # Auto mode: immediately apply AI decision
+            apply_action(player, decision["action"], decision.get("amount", 0),
+                         is_hero=True, reason=decision["reason"])
+        else:
+            # Manual mode: wait for 'hero_action' event from hero client
+            return
+
+    # NON-HERO TURN
     else:
         if player.sid:
             to_call = game.current_bet
@@ -565,7 +585,33 @@ def download_history():
 @socketio.on("hero_join")
 def on_hero_join(data):
     join_room(TABLE_ROOM)
-    emit("hero_joined", {"ok": True})
+    emit("hero_joined", {"ok": True, "mode": "auto" if game.hero_auto_play else "manual"})
+
+
+@socketio.on("hero_set_mode")
+def on_hero_set_mode(data):
+    mode = data.get("mode")
+    if mode == "auto":
+        game.hero_auto_play = True
+    elif mode == "manual":
+        game.hero_auto_play = False
+    # Notify all clients of the current mode
+    socketio.emit("hero_mode", {"mode": "auto" if game.hero_auto_play else "manual"}, room=TABLE_ROOM)
+    broadcast_state()
+
+
+@socketio.on("hero_action")
+def on_hero_action(data):
+    """Hero's manual action when in manual mode."""
+    if game.hero_auto_play:
+        # Ignore manual actions if in auto mode
+        return
+    player = find_player_by_seat(HERO_SEAT)
+    if not player or not game.hand_running:
+        return
+    action = data.get("action")
+    amount = int(data.get("amount") or 0)
+    apply_action(player, action, amount, is_hero=True)
 
 
 @socketio.on("join_table")
@@ -575,7 +621,7 @@ def on_join(data):
 
     # Assign free seat 1..6
     used_seats = {p.seat for p in game.players}
-    seat = None
+    seat = None    # seats 1-6 for other players
     for s in range(1, 7):
         if s not in used_seats:
             seat = s
