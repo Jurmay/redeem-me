@@ -71,12 +71,44 @@
             font-size: 11px;
             opacity: 0.85;
         }
-        #seat-0 { top: 8px;   left: 50%; transform: translate(-50%, 0); }
-        #seat-1 { top: 70px;  left: 8px; }
-        #seat-2 { top: 70px;  right: 8px; }
-        #seat-3 { top: 230px; right: 40px; }
-        #seat-4 { bottom: 8px; left: 50%; transform: translate(-50%, 0); }
-        #seat-5 { top: 230px; left: 40px; }
+      /* Seat positions – 7 seats around the oval */
+#seat-0 {            /* Hero AI – top centre */
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#seat-1 {            /* top-left */
+    top: 70px;
+    left: 60px;
+}
+
+#seat-2 {            /* top-right */
+    top: 70px;
+    right: 60px;
+}
+
+#seat-3 {            /* right-middle */
+    top: 180px;
+    right: 20px;
+}
+
+#seat-4 {            /* bottom centre */
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#seat-5 {            /* left-middle */
+    top: 180px;
+    left: 20px;
+}
+
+#seat-6 {            /* bottom-right */
+    bottom: 60px;
+    right: 70px;
+}
+
 
         .board-row {
             position: absolute;
@@ -190,6 +222,10 @@
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-5-line">–</span>
             </div>
+	<div class="seat" id="seat-6">
+    		<span class="seat-title">Empty</span>
+    		<span class="seat-line" id="seat-6-line">–</span>
+		</div>
 
             <!-- Board in the centre -->
             <div class="board-row">
@@ -258,14 +294,16 @@
 
         function updateSeats(players, currentSeat) {
             // Set all to default first
-            const defaults = [
-                { seat: 0, title: "Hero AI" },
-                { seat: 1, title: "Empty" },
-                { seat: 2, title: "Empty" },
-                { seat: 3, title: "Empty" },
-                { seat: 4, title: "Empty" },
-                { seat: 5, title: "Empty" }
-            ];
+           const defaults = [
+    		{ seat: 0, title: "Hero AI" },
+    		{ seat: 1, title: "Empty" },
+    		{ seat: 2, title: "Empty" },
+    		{ seat: 3, title: "Empty" },
+    		{ seat: 4, title: "Empty" },
+    		{ seat: 5, title: "Empty" },
+    		{ seat: 6, title: "Empty" }
+	];
+
             defaults.forEach(d => {
                 const box = document.getElementById("seat-" + d.seat);
                 const line = document.getElementById("seat-" + d.seat + "-line");
