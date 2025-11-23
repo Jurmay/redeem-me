@@ -99,19 +99,27 @@
             gap: 8px;
         }
         .board-card {
-            width: 60px;
-            height: 80px;
-            border-radius: 8px;
-            border: 2px solid #1d3d32;
-            background: linear-gradient(135deg, #0f2720, #16382d);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 8px rgba(0,0,0,0.7);
-            font-size: 20px;
-            font-weight: 700;
-            overflow: hidden;
-        }
+    /* The card is now just a container for the PNG */
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Actual PNG card face */
+.board-card-img {
+    width: 60px;        /* adjust if you want bigger/smaller cards */
+    height: auto;
+    display: block;
+    border-radius: 6px; /* optional – keep or remove */
+    box-shadow: 0 0 8px rgba(0,0,0,0.7);  /* optional glow around PNG */
+}
+
         .center-info {
             position: absolute;
             top: 58%;
@@ -128,11 +136,12 @@
             object-fit: contain;
         }
         .inline-card-img {
-            width: 55px;
-            height: auto;
-            margin-right: 4px;
-            vertical-align: middle;
-        }
+    width: 36px;      /* size for small cards in text areas */
+    height: auto;
+    margin-right: 4px;
+    vertical-align: middle;
+    display: inline-block;
+}
 
         .card-rank {
             font-size: 20px;
