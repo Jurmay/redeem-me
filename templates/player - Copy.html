@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Poker Table – Player</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(circle at top, #003b25, #00130f 60%, #000000 100%);
+            color: #f5f5f5;
+        }
+        .top-bar {
+            padding: 16px;
+            text-align: center;
+        }
+        h1 {
+            margin: 8px 0 16px;
+        }
+        input[type="text"] {
+            padding: 6px 8px;
+            margin-right: 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #0e2b23;
+            color: #f5f5f5;
+        }
+        button {
+            padding: 6px 14px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #join-btn {
+            background-color: #1e8c3a;
+            color: #fff;
+        }
+        #leave-btn {
+            background-color: #b3472f;
+            color: #fff;
+            margin-left: 6px;
+        }
+
+        .table-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .table-outer {
+            width: 700px;
+            height: 370px;
+            border-radius: 50%;
+            border: 6px solid #a35a2a;
+            background: radial-gradient(circle at top, #13542f, #06321a 65%, #04180f);
+            position: relative;
+        }
+
+        .seat {
+            position: absolute;
+            width: 130px;
+            padding: 6px 8px;
+            background: #020b0a;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+            font-size: 12px;
+            text-align: left;
+            transition: box-shadow 0.2s ease, border 0.2s ease;
+        }
+        .seat-title {
+            font-weight: 700;
+            display: block;
+        }
+        .seat-line {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+        .seat.to-act {
+            box-shadow: 0 0 14px rgba(255, 215, 0, 0.9);
+            border: 1px solid #ffd700;
+        }
+
+        /* Seat positions – 7 seats around the oval */
+        #seat-0 { top: 22px;  left: 50%; transform: translateX(-50%); }
+        #seat-1 { top: 70px;  left: 90px; }
+        #seat-2 { top: 70px;  right: 90px; }
+        #seat-3 { top: 170px; right: 35px; }
+        #seat-4 { bottom: 55px; right: 110px; }
+        #seat-5 { bottom: 55px; left: 110px; }
+        #seat-6 { top: 170px; left: 35px; }
+
+        .board-row {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 8px;
+        }
+        .board-card {
+            width: 60px;
+            height: 80px;
+            border-radius: 8px;
+            border: 2px solid #1d3d32;
+            background: linear-gradient(135deg, #0f2720, #16382d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 8px rgba(0,0,0,0.7);
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .center-info {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, 0);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .card-rank {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .card-suit {
+            margin-left: 2px;
+            font-size: 20px;
+        }
+        .red-suit {
+            color: #ff4d4d;
+        }
+        .black-suit {
+            color: #f5f5f5;
+        }
+
+        .bottom-panel {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .player-panel {
+            width: 700px;
+            background: #040f0d;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        .panel-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .panel-line {
+            margin: 2px 0;
+        }
+        .actions-row {
+            margin-top: 6px;
+        }
+        .actions-row button {
+            margin-right: 4px;
+        }
+        .actions-row input {
+            width: 60px;
+        }
+/* ============================
+   RESPONSIVE ADJUSTMENTS
+   ============================ */
+
+/* Large tablets and small laptops */
+@media (max-width: 1100px) {
+    .table-outer {
+        transform: scale(0.85);
+        transform-origin: top center;
+    }
+
+    .panel-row, .bottom-panel {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel, .player-panel {
+        width: 90%;
+    }
+
+    table {
+        width: 90%;
+    }
+}
+
+/* Tablets */
+@media (max-width: 800px) {
+    h1 {
+        font-size: 20px;
+    }
+
+    .table-outer {
+        transform: scale(0.70);
+        transform-origin: top center;
+    }
+
+    input, button {
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+
+    .seat {
+        width: 100px;
+        font-size: 10px;
+        padding: 4px;
+    }
+
+    .board-card {
+        width: 45px;
+        height: 65px;
+        font-size: 16px;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 550px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    .top-bar {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .table-outer {
+        transform: scale(0.55);
+        transform-origin: top center;
+    }
+
+    .panel-row, .bottom-panel, .stats-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel, .player-panel {
+        width: 95%;
+        font-size: 11px;
+        padding: 8px;
+    }
+
+    table {
+        width: 95%;
+        font-size: 11px;
+    }
+
+    .seat {
+        width: 90px;
+        font-size: 10px;
+        padding: 3px;
+    }
+
+    .board-card {
+        width: 40px;
+        height: 55px;
+        font-size: 15px;
+    }
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>Poker Table – Player</h1>
+        <input type="text" id="name-input" placeholder="Your name" />
+        <button id="join-btn">Join Table</button>
+        <button id="leave-btn">Leave Table</button>
+        <span id="join-status"></span>
+    </div>
+
+    <div class="table-wrapper">
+        <div class="table-outer">
+            <div class="seat" id="seat-0">
+                <span class="seat-title">Hero AI</span>
+                <span class="seat-line" id="seat-0-line">Chips: –</span>
+            </div>
+            <div class="seat" id="seat-1">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-1-line">–</span>
+            </div>
+            <div class="seat" id="seat-2">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-2-line">–</span>
+            </div>
+            <div class="seat" id="seat-3">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-3-line">–</span>
+            </div>
+            <div class="seat" id="seat-4">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-4-line">–</span>
+            </div>
+            <div class="seat" id="seat-5">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-5-line">–</span>
+            </div>
+            <div class="seat" id="seat-6">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-6-line">–</span>
+            </div>
+
+            <div class="board-row">
+                <div class="board-card" id="board-0">?</div>
+                <div class="board-card" id="board-1">?</div>
+                <div class="board-card" id="board-2">?</div>
+                <div class="board-card" id="board-3">?</div>
+                <div class="board-card" id="board-4">?</div>
+            </div>
+            <div class="center-info">
+                <div>Pot: <span id="pot-text">0</span></div>
+                <div>Street: <span id="street-text">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="player-panel">
+            <div class="panel-title">Seat Info</div>
+            <div class="panel-line">Seat: <span id="seat-text">-</span></div>
+            <div class="panel-line">Your cards: <span id="hole-cards-text">-</span></div>
+            <div class="panel-line">To call: <span id="to-call-text">0</span></div>
+
+            <div class="actions-row">
+                <button id="fold-btn">Fold</button>
+                <button id="check-btn">Check</button>
+                <button id="call-btn">Call</button>
+                <input type="number" id="raise-amount" value="20" min="1" />
+                <button id="raise-btn">Raise</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+// -------- Dynamic table scaling based on viewport & device pixel ratio --------
+const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
+
+function updateTableScale() {
+    const table = document.querySelector(".table-outer");
+    if (!table) return;
+
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const dpr = window.devicePixelRatio || 1;
+
+    // We allow the table to take up to ~95% of the viewport width
+    const usableWidth = viewportWidth * 0.95;
+
+    // Base scale relative to the original 700px width
+    let scale = usableWidth / TABLE_BASE_WIDTH;
+
+    // Never upscale above 1 (keep original size on large screens)
+    if (scale > 1) scale = 1;
+
+    // On very high DPI screens, bump scale a little so it does not feel tiny
+    if (dpr >= 2) {
+        scale *= 1.05;
+        if (scale > 1) scale = 1;
+    }
+
+    table.style.transform = `scale(${scale})`;
+    table.style.transformOrigin = "top center";
+}
+
+// Run on load and on resize
+window.addEventListener("load", updateTableScale);
+window.addEventListener("resize", updateTableScale);
+
+        let mySeat = null;
+        let toCall = 0;
+
+        function prettyCard(card) {
+            if (!card || card.length < 2) return card || "";
+            const rank = card[0];
+            const suitChar = card[1].toLowerCase();
+            const suitMap = { h: "♥", d: "♦", c: "♣", s: "♠" };
+            const suit = suitMap[suitChar] || suitChar;
+            const isRed = (suitChar === "h" || suitChar === "d");
+            return `<span class="card-rank">${rank}</span><span class="card-suit ${isRed ? "red-suit" : "black-suit"}">${suit}</span>`;
+        }
+
+        function prettyCardList(cards) {
+            return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
+        }
+
+        function updateBoard(board) {
+            for (let i = 0; i < 5; i++) {
+                const el = document.getElementById("board-" + i);
+                const card = board && board[i] ? board[i] : "?";
+                if (!el) continue;
+                if (card === "?") {
+                    el.textContent = "?";
+                } else {
+                    el.innerHTML = prettyCard(card);
+                }
+            }
+        }
+
+        function updateSeats(players, currentSeat) {
+            const defaults = [
+                { seat: 0, title: "Hero AI" },
+                { seat: 1, title: "Empty" },
+                { seat: 2, title: "Empty" },
+                { seat: 3, title: "Empty" },
+                { seat: 4, title: "Empty" },
+                { seat: 5, title: "Empty" },
+                { seat: 6, title: "Empty" }
+            ];
+
+            defaults.forEach(d => {
+                const box = document.getElementById("seat-" + d.seat);
+                const line = document.getElementById("seat-" + d.seat + "-line");
+                if (!box || !line) return;
+                box.classList.remove("to-act");
+                box.querySelector(".seat-title").textContent = d.title;
+                line.textContent = (d.seat === 0) ? "Chips: –" : "–";
+            });
+
+            const list = Array.isArray(players) ? players : [];
+            list.forEach(p => {
+                const box = document.getElementById("seat-" + p.seat);
+                const line = document.getElementById("seat-" + p.seat + "-line");
+                if (!box || !line) return;
+                box.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
+                let txt = "Chips: " + (p.chips ?? "-");
+                if (p.folded) txt += " (folded)";
+                if (currentSeat === p.seat) {
+                    txt += " – To act";
+                    box.classList.add("to-act");
+                }
+                line.textContent = txt;
+            });
+        }
+
+        document.getElementById("join-btn").addEventListener("click", () => {
+            const name = document.getElementById("name-input").value.trim() || "Guest";
+            socket.emit("join_table", { name });
+        });
+
+        document.getElementById("leave-btn").addEventListener("click", () => {
+            socket.emit("player_leave");
+            mySeat = null;
+            document.getElementById("seat-text").textContent = "-";
+            document.getElementById("hole-cards-text").textContent = "-";
+            document.getElementById("to-call-text").textContent = "0";
+            document.getElementById("join-status").textContent = "You left the table.";
+        });
+
+        socket.on("join_result", data => {
+            if (!data.success) {
+                const msg = data.error || "Unable to join.";
+                document.getElementById("join-status").textContent = msg;
+                return;
+            }
+            mySeat = data.seat;
+            document.getElementById("seat-text").textContent = mySeat;
+            document.getElementById("join-status").textContent = "Joined as seat " + mySeat;
+        });
+
+        socket.on("table_state", data => {
+            document.getElementById("pot-text").textContent = data.pot ?? 0;
+            document.getElementById("street-text").textContent = data.street || "-";
+            updateBoard(data.board || []);
+            updateSeats(data.players || [], data.current_player_seat);
+        });
+
+        socket.on("hole_cards", data => {
+            const cards = data.cards || [];
+            document.getElementById("hole-cards-text").innerHTML = prettyCardList(cards);
+        });
+
+        socket.on("request_action", data => {
+            if (data.seat !== mySeat) return;
+            toCall = data.to_call || 0;
+            document.getElementById("to-call-text").textContent = toCall;
+        });
+
+        socket.on("table_reset", () => {
+            updateBoard([]);
+            updateSeats([], null);
+            document.getElementById("hole-cards-text").textContent = "-";
+            document.getElementById("to-call-text").textContent = "0";
+        });
+
+        socket.on("kicked", data => {
+            if (data.seat !== mySeat) return;
+            mySeat = null;
+            document.getElementById("seat-text").textContent = "-";
+            document.getElementById("hole-cards-text").textContent = "-";
+            document.getElementById("to-call-text").textContent = "0";
+            document.getElementById("join-status").textContent = "You were removed from the table.";
+        });
+
+        function sendAction(action, amount) {
+            if (mySeat === null) return;
+            socket.emit("player_action", {
+                seat: mySeat,
+                action: action,
+                amount: amount || 0
+            });
+        }
+
+        document.getElementById("fold-btn").addEventListener("click", () => {
+            sendAction("FOLD", 0);
+        });
+        document.getElementById("check-btn").addEventListener("click", () => {
+            sendAction("CHECK", 0);
+        });
+        document.getElementById("call-btn").addEventListener("click", () => {
+            sendAction("CALL", toCall);
+        });
+        document.getElementById("raise-btn").addEventListener("click", () => {
+            const amt = parseInt(document.getElementById("raise-amount").value || "0", 10);
+            if (amt > 0) sendAction("RAISE", amt);
+        });
+    </script>
+</body>
+</html>

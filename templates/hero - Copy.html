@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Poker Hero (AI Coach)</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(circle at top, #003b25, #00130f 60%, #000000 100%);
+            color: #f5f5f5;
+        }
+        .top-bar {
+            padding: 16px;
+            text-align: center;
+        }
+        h1 {
+            margin: 8px 0 16px;
+        }
+        input[type="text"] {
+            padding: 6px 8px;
+            margin: 0 4px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #0e2b23;
+            color: #f5f5f5;
+        }
+        button {
+            padding: 6px 14px;
+            margin-left: 6px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #start-hand-btn {
+            background-color: #1e8c3a;
+            color: #fff;
+        }
+        #reset-btn {
+            background-color: #b3472f;
+            color: #fff;
+        }
+        #download-csv-btn {
+            background-color: #2f6bb3;
+            color: #fff;
+        }
+        #update-board-btn {
+            background-color: #c58a20;
+            color: #fff;
+        }
+        #kick-btn {
+            background-color: #8c1e1e;
+            color: #fff;
+        }
+
+        .mode-pill {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #08241b;
+            border: 1px solid #1f4634;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .mode-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-left: 4px;
+            border-radius: 999px;
+            border: 1px solid #666;
+            background: #122920;
+            color: #f5f5f5;
+        }
+        .mode-btn.active {
+            background: #1e8c3a;
+            border-color: #3dd86b;
+            color: #fff;
+        }
+        .mode-btn.inactive {
+            opacity: 0.5;
+        }
+
+        .table-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .table-outer {
+            width: 700px;
+            height: 370px;
+            border-radius: 50%;
+            border: 6px solid #a35a2a;
+            background: radial-gradient(circle at top, #13542f, #06321a 65%, #04180f);
+            position: relative;
+        }
+        .seat {
+            position: absolute;
+            width: 130px;
+            padding: 6px 8px;
+            background: #020b0a;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+            font-size: 12px;
+            text-align: left;
+            transition: box-shadow 0.2s ease, border 0.2s ease;
+        }
+        .seat-title {
+            font-weight: 700;
+            display: block;
+        }
+        .seat-line {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+        .seat.to-act {
+            box-shadow: 0 0 14px rgba(255, 215, 0, 0.9);
+            border: 1px solid #ffd700;
+        }
+
+        /* Seat positions – 7 seats around the oval */
+        #seat-0 {
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #seat-1 { top: 70px; left: 90px; }
+        #seat-2 { top: 70px; right: 90px; }
+        #seat-3 { top: 170px; right: 35px; }
+        #seat-4 { bottom: 55px; right: 110px; }
+        #seat-5 { bottom: 55px; left: 110px; }
+        #seat-6 { top: 170px; left: 35px; }
+
+        .board-row {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 8px;
+        }
+        .board-card {
+            width: 60px;
+            height: 80px;
+            border-radius: 8px;
+            border: 2px solid #1d3d32;
+            background: linear-gradient(135deg, #0f2720, #16382d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 8px rgba(0,0,0,0.7);
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .center-info {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, 0);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .card-rank {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .card-suit {
+            margin-left: 2px;
+            font-size: 20px;
+        }
+        .red-suit {
+            color: #ff4d4d;
+        }
+        .black-suit {
+            color: #f5f5f5;
+        }
+
+        .panel-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+            gap: 12px;
+        }
+        .panel {
+            width: 30%;
+            min-height: 80px;
+            background: #040f0d;
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+        .panel-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .panel-line {
+            margin: 2px 0;
+        }
+
+        .hero-action-row {
+            margin-top: 4px;
+            font-size: 12px;
+        }
+        .hero-action-row button {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        .hero-action-row input {
+            width: 50px;
+            padding: 2px 4px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        .hint-text {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .stats-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        table {
+            width: 700px;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #234238;
+            padding: 4px 6px;
+            text-align: center;
+        }
+        th {
+            background: #0d291e;
+            font-weight: 700;
+        }
+        tbody tr:nth-child(even) {
+            background: #031511;
+        }
+        tbody tr:nth-child(odd) {
+            background: #041c15;
+        }
+/* ============================
+   RESPONSIVE ADJUSTMENTS
+   ============================ */
+
+/* Large tablets and small laptops */
+@media (max-width: 1100px) {
+    .table-outer {
+        transform: scale(0.85);
+        transform-origin: top center;
+    }
+
+    .panel-row, .bottom-panel {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel, .player-panel {
+        width: 90%;
+    }
+
+    table {
+        width: 90%;
+    }
+}
+
+/* Tablets */
+@media (max-width: 800px) {
+    h1 {
+        font-size: 20px;
+    }
+
+    .table-outer {
+        transform: scale(0.70);
+        transform-origin: top center;
+    }
+
+    input, button {
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+
+    .seat {
+        width: 100px;
+        font-size: 10px;
+        padding: 4px;
+    }
+
+    .board-card {
+        width: 45px;
+        height: 65px;
+        font-size: 16px;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 550px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    .top-bar {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .table-outer {
+        transform: scale(0.55);
+        transform-origin: top center;
+    }
+
+    .panel-row, .bottom-panel, .stats-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel, .player-panel {
+        width: 95%;
+        font-size: 11px;
+        padding: 8px;
+    }
+
+    table {
+        width: 95%;
+        font-size: 11px;
+    }
+
+    .seat {
+        width: 90px;
+        font-size: 10px;
+        padding: 3px;
+    }
+
+    .board-card {
+        width: 40px;
+        height: 55px;
+        font-size: 15px;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>Texas Hold’em – Hero / AI Coach</h1>
+        Hero cards (e.g. As Kd):
+        <input type="text" id="hero-cards-input" placeholder="As Kd" />
+        Flop (e.g. Ah Kc 7d):
+        <input type="text" id="flop-input" placeholder="Ah Kc 7d" />
+        Turn (e.g. 2s):
+        <input type="text" id="turn-input" placeholder="2s" />
+        River (e.g. 3c):
+        <input type="text" id="river-input" placeholder="3c" />
+        <button id="start-hand-btn">Start Hand</button>
+        <button id="reset-btn">Reset Hand</button>
+	<button id="hard-reset-btn">Hard Reset</button>
+        <button id="download-csv-btn">Download CSV</button>
+        <button id="update-board-btn">Update Board</button>
+
+        <span class="mode-pill">
+            Mode:
+            <button id="mode-auto-btn" class="mode-btn active">Auto</button>
+            <button id="mode-manual-btn" class="mode-btn inactive">Manual</button>
+        </span>
+
+        <span class="mode-pill">
+            Kick seat:
+            <input type="number" id="kick-seat-input" min="1" max="6" style="width:40px; padding:2px 4px; font-size:12px;" />
+            <button id="kick-btn">Kick</button>
+        </span>
+    </div>
+
+    <div class="table-wrapper">
+        <div class="table-outer">
+            <div class="seat" id="seat-0">
+                <span class="seat-title">Hero AI</span>
+                <span class="seat-line" id="seat-0-line">Chips: –</span>
+            </div>
+            <div class="seat" id="seat-1">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-1-line">–</span>
+            </div>
+            <div class="seat" id="seat-2">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-2-line">–</span>
+            </div>
+            <div class="seat" id="seat-3">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-3-line">–</span>
+            </div>
+            <div class="seat" id="seat-4">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-4-line">–</span>
+            </div>
+            <div class="seat" id="seat-5">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-5-line">–</span>
+            </div>
+            <div class="seat" id="seat-6">
+                <span class="seat-title">Empty</span>
+                <span class="seat-line" id="seat-6-line">–</span>
+            </div>
+
+            <div class="board-row">
+                <div class="board-card" id="board-0">?</div>
+                <div class="board-card" id="board-1">?</div>
+                <div class="board-card" id="board-2">?</div>
+                <div class="board-card" id="board-3">?</div>
+                <div class="board-card" id="board-4">?</div>
+            </div>
+
+            <div class="center-info">
+                <div>Pot: <span id="pot-text">0</span></div>
+                <div>Street: <span id="street-text">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-row">
+        <div class="panel">
+            <div class="panel-title">Hero Hand</div>
+            <div class="panel-line">Cards: <span id="hero-hand-cards">–</span></div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">AI Decision</div>
+            <div class="panel-line">Action: <span id="ai-action">–</span></div>
+            <div class="panel-line">Amount: <span id="ai-amount">–</span></div>
+            <div class="panel-line">Reason: <span id="ai-reason">–</span></div>
+
+            <div class="hero-action-row">
+                <button id="hero-fold-btn">Fold</button>
+                <button id="hero-checkcall-btn">Check / Call</button>
+                <input type="number" id="hero-raise-amount" value="20" min="1" />
+                <button id="hero-raise-btn">Raise</button>
+            </div>
+            <div class="hint-text">
+                In <strong>manual</strong> mode, click an action above to apply it.  
+                In <strong>auto</strong> mode, the AI acts automatically.
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">Last Hand Result</div>
+            <div class="panel-line" id="last-result-board">Board: –</div>
+            <div class="panel-line" id="last-result-note">Note: –</div>
+            <ul id="last-result-list"></ul>
+        </div>
+    </div>
+
+    <div class="stats-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Seat</th>
+                    <th>Name</th>
+                    <th>Hands</th>
+                    <th>VPIP %</th>
+                    <th>PFR %</th>
+                </tr>
+            </thead>
+            <tbody id="player-stats-body">
+                <!-- Filled by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const socket = io();
+// -------- Dynamic table scaling based on viewport & device pixel ratio --------
+const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
+
+function updateTableScale() {
+    const table = document.querySelector(".table-outer");
+    if (!table) return;
+
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const dpr = window.devicePixelRatio || 1;
+
+    // We allow the table to take up to ~95% of the viewport width
+    const usableWidth = viewportWidth * 0.95;
+
+    // Base scale relative to the original 700px width
+    let scale = usableWidth / TABLE_BASE_WIDTH;
+
+    // Never upscale above 1 (keep original size on large screens)
+    if (scale > 1) scale = 1;
+
+    // On very high DPI screens, bump scale a little so it does not feel tiny
+    if (dpr >= 2) {
+        scale *= 1.05;
+        if (scale > 1) scale = 1;
+    }
+
+    table.style.transform = `scale(${scale})`;
+    table.style.transformOrigin = "top center";
+}
+
+// Run on load and on resize
+window.addEventListener("load", updateTableScale);
+window.addEventListener("resize", updateTableScale);
+
+        let heroMode = "auto";
+        let lastHeroDecision = null;
+
+        const modeAutoBtn   = document.getElementById("mode-auto-btn");
+        const modeManualBtn = document.getElementById("mode-manual-btn");
+
+        const heroFoldBtn      = document.getElementById("hero-fold-btn");
+        const heroCheckCallBtn = document.getElementById("hero-checkcall-btn");
+        const heroRaiseBtn     = document.getElementById("hero-raise-btn");
+        const heroRaiseInput   = document.getElementById("hero-raise-amount");
+
+        const kickSeatInput = document.getElementById("kick-seat-input");
+        const kickBtn       = document.getElementById("kick-btn");
+
+        function setModeButtons(mode) {
+            heroMode = mode;
+            if (mode === "auto") {
+                modeAutoBtn.classList.add("active");
+                modeAutoBtn.classList.remove("inactive");
+                modeManualBtn.classList.remove("active");
+                modeManualBtn.classList.add("inactive");
+            } else {
+                modeManualBtn.classList.add("active");
+                modeManualBtn.classList.remove("inactive");
+                modeAutoBtn.classList.remove("active");
+                modeAutoBtn.classList.add("inactive");
+            }
+        }
+
+        modeAutoBtn.addEventListener("click", () => {
+            socket.emit("hero_set_mode", { mode: "auto" });
+        });
+
+        modeManualBtn.addEventListener("click", () => {
+            socket.emit("hero_set_mode", { mode: "manual" });
+        });
+
+        kickBtn.addEventListener("click", () => {
+            const seatVal = parseInt(kickSeatInput.value || "0", 10);
+            if (!seatVal || seatVal < 1 || seatVal > 6) return;
+            socket.emit("hero_kick", { seat: seatVal });
+        });
+
+        function prettyCard(card) {
+            if (!card || card.length < 2) return card || "";
+            const rank = card[0];
+            const suitChar = card[1].toLowerCase();
+            const suitMap = { h: "♥", d: "♦", c: "♣", s: "♠" };
+            const suit = suitMap[suitChar] || suitChar;
+            const isRed = (suitChar === "h" || suitChar === "d");
+            return `<span class="card-rank">${rank}</span><span class="card-suit ${isRed ? "red-suit" : "black-suit"}">${suit}</span>`;
+        }
+
+        function prettyCardList(cards) {
+            return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
+        }
+
+        function resetSeats() {
+            for (let s = 0; s <= 6; s++) {
+                const seatBox = document.getElementById("seat-" + s);
+                const line = document.getElementById("seat-" + s + "-line");
+                if (!seatBox || !line) continue;
+                seatBox.classList.remove("to-act");
+                if (s === 0) {
+                    seatBox.querySelector(".seat-title").textContent = "Hero AI";
+                    line.textContent = "Chips: –";
+                } else {
+                    seatBox.querySelector(".seat-title").textContent = "Empty";
+                    line.textContent = "–";
+                }
+            }
+        }
+
+        function updateSeats(players, currentSeat) {
+            resetSeats();
+            (players || []).forEach(p => {
+                const id = "seat-" + p.seat;
+                const el = document.getElementById(id);
+                const line = document.getElementById(id + "-line");
+                if (!el || !line) return;
+                el.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
+                let txt = "Chips: " + (p.chips ?? "-");
+                if (p.folded) txt += " (folded)";
+                if (currentSeat === p.seat) {
+                    txt += " – To act";
+                    el.classList.add("to-act");
+                }
+                line.textContent = txt;
+            });
+        }
+
+        function updateBoard(board) {
+            for (let i = 0; i < 5; i++) {
+                const el = document.getElementById("board-" + i);
+                const card = board && board[i] ? board[i] : "?";
+                if (card === "?") {
+                    el.textContent = "?";
+                } else {
+                    el.innerHTML = prettyCard(card);
+                }
+            }
+        }
+
+        function updateStats(stats) {
+            const body = document.getElementById("player-stats-body");
+            body.innerHTML = "";
+            (stats || []).forEach(p => {
+                const hands = p.hands_played ?? p.hands ?? 0;
+                const vpip  = p.vpip_pct ?? p.vpip ?? 0;
+                const pfr   = p.pfr_pct ?? p.pfr ?? 0;
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${p.seat}</td>
+                    <td>${p.name}</td>
+                    <td>${hands}</td>
+                    <td>${vpip}</td>
+                    <td>${pfr}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        socket.on("connect", () => {
+            socket.emit("hero_join", {});
+        });
+
+        socket.on("hero_joined", data => {
+            if (data && data.mode) {
+                setModeButtons(data.mode);
+            } else {
+                setModeButtons("auto");
+            }
+        });
+
+        document.getElementById("start-hand-btn").addEventListener("click", () => {
+            const heroCards = document.getElementById("hero-cards-input").value.trim();
+            const flop = document.getElementById("flop-input").value.trim();
+            const turn = document.getElementById("turn-input").value.trim();
+            const river = document.getElementById("river-input").value.trim();
+
+            let boardCards = [];
+            if (flop) boardCards = boardCards.concat(flop.split(/\s+/));
+            if (turn) boardCards.push(turn);
+            if (river) boardCards.push(river);
+            const boardStr = boardCards.join(" ");
+
+            socket.emit("hero_start_hand", {
+                hero_cards: heroCards || null,
+                board_cards: boardStr || null
+            });
+        });
+
+        // Soft reset: clear current hand, keep players and stats
+document.getElementById("reset-btn").addEventListener("click", () => {
+    socket.emit("hero_soft_reset");
+    updateBoard([]);
+    document.getElementById("pot-text").textContent = "0";
+    document.getElementById("street-text").textContent = "-";
+    document.getElementById("hero-hand-cards").textContent = "–";
+    document.getElementById("ai-action").textContent = "–";
+    document.getElementById("ai-amount").textContent = "–";
+    document.getElementById("ai-reason").textContent = "–";
+    document.getElementById("last-result-board").textContent = "Board: –";
+    document.getElementById("last-result-note").textContent = "Note: –";
+    document.getElementById("last-result-list").innerHTML = "";
+    // NOTE: we do NOT call resetSeats() or clear stats here
+});
+
+// Hard reset: full table wipe, remove players and stats
+document.getElementById("hard-reset-btn").addEventListener("click", () => {
+    if (!confirm("Hard reset will remove all players from the table. Continue?")) return;
+
+    socket.emit("reset_table");
+    updateBoard([]);
+    document.getElementById("pot-text").textContent = "0";
+    document.getElementById("street-text").textContent = "-";
+    document.getElementById("hero-hand-cards").textContent = "–";
+    document.getElementById("ai-action").textContent = "–";
+    document.getElementById("ai-amount").textContent = "–";
+    document.getElementById("ai-reason").textContent = "–";
+    document.getElementById("last-result-board").textContent = "Board: –";
+    document.getElementById("last-result-note").textContent = "Note: –";
+    document.getElementById("last-result-list").innerHTML = "";
+    resetSeats();
+    document.getElementById("player-stats-body").innerHTML = "";
+});
+
+        document.getElementById("download-csv-btn").addEventListener("click", () => {
+            window.location.href = "/download_csv";
+        });
+
+        document.getElementById("update-board-btn").addEventListener("click", () => {
+            const flop = document.getElementById("flop-input").value.trim();
+            const turn = document.getElementById("turn-input").value.trim();
+            const river = document.getElementById("river-input").value.trim();
+
+            let boardCards = [];
+            if (flop) boardCards = boardCards.concat(flop.split(/\s+/));
+            if (turn) boardCards.push(turn);
+            if (river) boardCards.push(river);
+            const boardStr = boardCards.join(" ");
+            if (!boardStr) return;
+
+            socket.emit("hero_set_board", {
+                board_cards: boardStr
+            });
+        });
+
+        socket.on("table_state", data => {
+            document.getElementById("pot-text").textContent = data.pot ?? 0;
+            document.getElementById("street-text").textContent = data.street || "-";
+            updateBoard(data.board || []);
+            updateSeats(data.players || [], data.current_player_seat);
+        });
+
+        socket.on("stats_update", data => {
+            const stats = (data && data.stats) || [];
+            updateStats(stats);
+        });
+
+        socket.on("hero_hole_cards", data => {
+            const cards = data.cards || [];
+            document.getElementById("hero-hand-cards").innerHTML = prettyCardList(cards);
+        });
+
+        socket.on("hero_decision", data => {
+            lastHeroDecision = data || null;
+            document.getElementById("ai-action").textContent = data.action || "-";
+            document.getElementById("ai-amount").textContent = data.amount ?? "–";
+            document.getElementById("ai-reason").textContent = data.reason || "-";
+
+            if (data && data.mode) {
+                setModeButtons(data.mode);
+            }
+        });
+
+        socket.on("hero_mode", data => {
+            if (!data || !data.mode) return;
+            setModeButtons(data.mode);
+        });
+
+        socket.on("hand_result", data => {
+            const board = data.board || [];
+            const players = data.players || [];
+            const note = data.note || "";
+
+            const boardPretty = board.map(prettyCard).join(" ");
+            document.getElementById("last-result-board").innerHTML = "Board: " + boardPretty;
+            document.getElementById("last-result-note").textContent = "Note: " + note;
+
+            const ul = document.getElementById("last-result-list");
+            ul.innerHTML = "";
+            players.forEach(p => {
+                const cardsPretty = prettyCardList(p.hole_cards || []);
+                const winnerTag = p.winner ? "<strong> (WINNER)</strong>" : "";
+                const foldedTag = p.folded ? "(folded)" : "";
+                const bestFive = p.best_five || [];
+                const bestPretty = bestFive.length ? prettyCardList(bestFive) : "";
+                const bestTag = p.winner && bestPretty ? ` – Best 5: ${bestPretty}` : "";
+                const li = document.createElement("li");
+                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${foldedTag} ${winnerTag}${bestTag}`;
+                ul.appendChild(li);
+            });
+        });
+
+        function sendHeroAction(action, amount) {
+            if (heroMode !== "manual") return;
+            socket.emit("hero_action", {
+                action: action,
+                amount: amount || 0
+            });
+        }
+
+        heroFoldBtn.addEventListener("click", () => {
+            sendHeroAction("FOLD", 0);
+        });
+
+        heroCheckCallBtn.addEventListener("click", () => {
+            sendHeroAction("CALL", 0);
+        });
+
+        heroRaiseBtn.addEventListener("click", () => {
+            let amt = parseInt(heroRaiseInput.value || "0", 10);
+            if (!amt || amt <= 0) {
+                if (lastHeroDecision && lastHeroDecision.amount) {
+                    amt = lastHeroDecision.amount;
+                } else {
+                    amt = 20;
+                }
+            }
+            sendHeroAction("RAISE", amt);
+        });
+    </script>
+</body>
+</html>
