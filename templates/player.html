@@ -164,6 +164,110 @@
         .actions-row input {
             width: 60px;
         }
+/* ============================
+   RESPONSIVE ADJUSTMENTS
+   ============================ */
+
+/* Large tablets and small laptops */
+@media (max-width: 1100px) {
+    .table-outer {
+        transform: scale(0.85);
+        transform-origin: top center;
+    }
+
+    .panel-row, .bottom-panel {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel, .player-panel {
+        width: 90%;
+    }
+
+    table {
+        width: 90%;
+    }
+}
+
+/* Tablets */
+@media (max-width: 800px) {
+    h1 {
+        font-size: 20px;
+    }
+
+    .table-outer {
+        transform: scale(0.70);
+        transform-origin: top center;
+    }
+
+    input, button {
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+
+    .seat {
+        width: 100px;
+        font-size: 10px;
+        padding: 4px;
+    }
+
+    .board-card {
+        width: 45px;
+        height: 65px;
+        font-size: 16px;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 550px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    h1 {
+        font-size: 18px;
+    }
+
+    .top-bar {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .table-outer {
+        transform: scale(0.55);
+        transform-origin: top center;
+    }
+
+    .panel-row, .bottom-panel, .stats-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel, .player-panel {
+        width: 95%;
+        font-size: 11px;
+        padding: 8px;
+    }
+
+    table {
+        width: 95%;
+        font-size: 11px;
+    }
+
+    .seat {
+        width: 90px;
+        font-size: 10px;
+        padding: 3px;
+    }
+
+    .board-card {
+        width: 40px;
+        height: 55px;
+        font-size: 15px;
+    }
+}
+
+
     </style>
 </head>
 <body>
@@ -239,6 +343,38 @@
 
     <script>
         const socket = io();
+// -------- Dynamic table scaling based on viewport & device pixel ratio --------
+const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
+
+function updateTableScale() {
+    const table = document.querySelector(".table-outer");
+    if (!table) return;
+
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const dpr = window.devicePixelRatio || 1;
+
+    // We allow the table to take up to ~95% of the viewport width
+    const usableWidth = viewportWidth * 0.95;
+
+    // Base scale relative to the original 700px width
+    let scale = usableWidth / TABLE_BASE_WIDTH;
+
+    // Never upscale above 1 (keep original size on large screens)
+    if (scale > 1) scale = 1;
+
+    // On very high DPI screens, bump scale a little so it does not feel tiny
+    if (dpr >= 2) {
+        scale *= 1.05;
+        if (scale > 1) scale = 1;
+    }
+
+    table.style.transform = `scale(${scale})`;
+    table.style.transformOrigin = "top center";
+}
+
+// Run on load and on resize
+window.addEventListener("load", updateTableScale);
+window.addEventListener("resize", updateTableScale);
 
         let mySeat = null;
         let toCall = 0;
