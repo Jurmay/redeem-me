@@ -398,6 +398,10 @@
         <button id="hard-reset-btn">Hard Reset</button>
         <button id="download-csv-btn">Download CSV</button>
         <button id="update-board-btn">Update Board</button>
+	<button id="voice-toggle-btn" style="background:#444; color:#fff; margin-left:10px;">
+    	Voice: OFF
+	</button>
+
 
         <span class="mode-pill">
             Mode:
@@ -506,6 +510,16 @@
     </div>
 
     <script>
+
+function speak(text) {
+    if (!("speechSynthesis" in window)) return;  // no support
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.rate = 1.0;   // speed
+    msg.pitch = 1.0;  // tone
+    window.speechSynthesis.cancel();             // stop previous
+    window.speechSynthesis.speak(msg);
+}
+
         const socket = io();
 
         // -------- Dynamic table scaling based on viewport & device pixel ratio --------
@@ -783,6 +797,10 @@
 
             if (data && data.mode) {
                 setModeButtons(data.mode);
+    const actionText = data.action || "";
+    const amountText = data.amount ? ` for ${data.amount} chips` : "";
+    speak(`AI suggests ${actionText}${amountText}. ${data.reason || ""}`);
+
             }
         });
 
