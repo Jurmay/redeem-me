@@ -37,11 +37,6 @@
             background-color: #1e8c3a;
             color: #fff;
         }
-        #leave-btn {
-            background-color: #b3472f;
-            color: #fff;
-            margin-left: 6px;
-        }
 
         .table-wrapper {
             display: flex;
@@ -66,7 +61,12 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.5);
             font-size: 12px;
             text-align: left;
-            transition: box-shadow 0.2s ease, border 0.2s ease;
+            border: 1px solid transparent;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .seat.to-act {
+            box-shadow: 0 0 12px rgba(255,215,0,0.9);
+            border-color: #ffd700;
         }
         .seat-title {
             font-weight: 700;
@@ -76,9 +76,19 @@
             font-size: 11px;
             opacity: 0.85;
         }
-        .seat.to-act {
-            box-shadow: 0 0 14px rgba(255, 215, 0, 0.9);
-            border: 1px solid #ffd700;
+        .seat-cards {
+            margin-top: 2px;
+            display: flex;
+            gap: 2px;
+        }
+        .card-back-mini {
+            width: 22px;
+            height: 30px;
+            border-radius: 4px;
+            background-image: url("/static/cards_renamed/back.png");
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
         }
 
         /* Seat positions – 7 seats around the oval */
@@ -110,6 +120,7 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.7);
             font-size: 20px;
             font-weight: 700;
+            overflow: hidden;
         }
         .center-info {
             position: absolute;
@@ -118,21 +129,6 @@
             transform: translate(-50%, 0);
             text-align: center;
             font-size: 12px;
-        }
-
-        .card-rank {
-            font-size: 20px;
-            font-weight: 700;
-        }
-        .card-suit {
-            margin-left: 2px;
-            font-size: 20px;
-        }
-        .red-suit {
-            color: #ff4d4d;
-        }
-        .black-suit {
-            color: #f5f5f5;
         }
 
         .bottom-panel {
@@ -164,110 +160,45 @@
         .actions-row input {
             width: 60px;
         }
-/* ============================
-   RESPONSIVE ADJUSTMENTS
-   ============================ */
 
-/* Large tablets and small laptops */
-@media (max-width: 1100px) {
-    .table-outer {
-        transform: scale(0.85);
-        transform-origin: top center;
-    }
+        .card-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            display: block;
+        }
+        .deal-anim {
+            animation: dealIn 0.25s ease-out;
+        }
+        @keyframes dealIn {
+            from {
+                transform: translateY(-20px) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
 
-    .panel-row, .bottom-panel {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .panel, .player-panel {
-        width: 90%;
-    }
-
-    table {
-        width: 90%;
-    }
-}
-
-/* Tablets */
-@media (max-width: 800px) {
-    h1 {
-        font-size: 20px;
-    }
-
-    .table-outer {
-        transform: scale(0.70);
-        transform-origin: top center;
-    }
-
-    input, button {
-        font-size: 12px;
-        padding: 5px 8px;
-    }
-
-    .seat {
-        width: 100px;
-        font-size: 10px;
-        padding: 4px;
-    }
-
-    .board-card {
-        width: 45px;
-        height: 65px;
-        font-size: 16px;
-    }
-}
-
-/* Mobile phones */
-@media (max-width: 550px) {
-    body {
-        overflow-x: hidden;
-    }
-
-    h1 {
-        font-size: 18px;
-    }
-
-    .top-bar {
-        padding: 8px;
-        font-size: 12px;
-    }
-
-    .table-outer {
-        transform: scale(0.55);
-        transform-origin: top center;
-    }
-
-    .panel-row, .bottom-panel, .stats-wrapper {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .panel, .player-panel {
-        width: 95%;
-        font-size: 11px;
-        padding: 8px;
-    }
-
-    table {
-        width: 95%;
-        font-size: 11px;
-    }
-
-    .seat {
-        width: 90px;
-        font-size: 10px;
-        padding: 3px;
-    }
-
-    .board-card {
-        width: 40px;
-        height: 55px;
-        font-size: 15px;
-    }
-}
-
-
+        @media (max-width: 900px) {
+            .player-panel {
+                width: 90%;
+            }
+        }
+        @media (max-width: 600px) {
+            .top-bar {
+                padding: 8px;
+                font-size: 12px;
+            }
+            h1 {
+                font-size: 18px;
+            }
+            .player-panel {
+                width: 95%;
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -275,7 +206,6 @@
         <h1>Poker Table – Player</h1>
         <input type="text" id="name-input" placeholder="Your name" />
         <button id="join-btn">Join Table</button>
-        <button id="leave-btn">Leave Table</button>
         <span id="join-status"></span>
     </div>
 
@@ -284,30 +214,37 @@
             <div class="seat" id="seat-0">
                 <span class="seat-title">Hero AI</span>
                 <span class="seat-line" id="seat-0-line">Chips: –</span>
+                <div class="seat-cards" id="seat-0-cards"></div>
             </div>
             <div class="seat" id="seat-1">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-1-line">–</span>
+                <div class="seat-cards" id="seat-1-cards"></div>
             </div>
             <div class="seat" id="seat-2">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-2-line">–</span>
+                <div class="seat-cards" id="seat-2-cards"></div>
             </div>
             <div class="seat" id="seat-3">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-3-line">–</span>
+                <div class="seat-cards" id="seat-3-cards"></div>
             </div>
             <div class="seat" id="seat-4">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-4-line">–</span>
+                <div class="seat-cards" id="seat-4-cards"></div>
             </div>
             <div class="seat" id="seat-5">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-5-line">–</span>
+                <div class="seat-cards" id="seat-5-cards"></div>
             </div>
             <div class="seat" id="seat-6">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-6-line">–</span>
+                <div class="seat-cards" id="seat-6-cards"></div>
             </div>
 
             <div class="board-row">
@@ -343,70 +280,48 @@
 
     <script>
         const socket = io();
-// -------- Dynamic table scaling based on viewport & device pixel ratio --------
-const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
-
-function updateTableScale() {
-    const table = document.querySelector(".table-outer");
-    if (!table) return;
-
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-    const dpr = window.devicePixelRatio || 1;
-
-    // We allow the table to take up to ~95% of the viewport width
-    const usableWidth = viewportWidth * 0.95;
-
-    // Base scale relative to the original 700px width
-    let scale = usableWidth / TABLE_BASE_WIDTH;
-
-    // Never upscale above 1 (keep original size on large screens)
-    if (scale > 1) scale = 1;
-
-    // On very high DPI screens, bump scale a little so it does not feel tiny
-    if (dpr >= 2) {
-        scale *= 1.05;
-        if (scale > 1) scale = 1;
-    }
-
-    table.style.transform = `scale(${scale})`;
-    table.style.transformOrigin = "top center";
-}
-
-// Run on load and on resize
-window.addEventListener("load", updateTableScale);
-window.addEventListener("resize", updateTableScale);
 
         let mySeat = null;
         let toCall = 0;
 
-        function prettyCard(card) {
-            if (!card || card.length < 2) return card || "";
-            const rank = card[0];
-            const suitChar = card[1].toLowerCase();
-            const suitMap = { h: "♥", d: "♦", c: "♣", s: "♠" };
-            const suit = suitMap[suitChar] || suitChar;
-            const isRed = (suitChar === "h" || suitChar === "d");
-            return `<span class="card-rank">${rank}</span><span class="card-suit ${isRed ? "red-suit" : "black-suit"}">${suit}</span>`;
+        const TABLE_BASE_WIDTH = 700;
+        function updateTableScale() {
+            const table = document.querySelector(".table-outer");
+            if (!table) return;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
+            const usableWidth = viewportWidth * 0.95;
+            let scale = usableWidth / TABLE_BASE_WIDTH;
+            if (scale > 1) scale = 1;
+            if (dpr >= 2) {
+                scale *= 1.05;
+                if (scale > 1) scale = 1;
+            }
+            table.style.transform = `scale(${scale})`;
+            table.style.transformOrigin = "top center";
         }
+        window.addEventListener("load", updateTableScale);
+        window.addEventListener("resize", updateTableScale);
 
-        function prettyCardList(cards) {
-            return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
+        function cardImageUrl(code) {
+            if (!code || code.length < 2) return null;
+            return `/static/cards_renamed/${code}.png`;
         }
 
         function updateBoard(board) {
             for (let i = 0; i < 5; i++) {
                 const el = document.getElementById("board-" + i);
-                const card = board && board[i] ? board[i] : "?";
-                if (!el) continue;
-                if (card === "?") {
-                    el.textContent = "?";
+                const card = board && board[i] ? board[i] : null;
+                if (!card) {
+                    el.innerHTML = "?";
                 } else {
-                    el.innerHTML = prettyCard(card);
+                    const url = cardImageUrl(card);
+                    el.innerHTML = `<img src="${url}" class="card-img deal-anim">`;
                 }
             }
         }
 
-        function updateSeats(players, currentSeat) {
+        function updateSeats(players, currentSeat, handRunning) {
             const defaults = [
                 { seat: 0, title: "Hero AI" },
                 { seat: 1, title: "Empty" },
@@ -420,25 +335,41 @@ window.addEventListener("resize", updateTableScale);
             defaults.forEach(d => {
                 const box = document.getElementById("seat-" + d.seat);
                 const line = document.getElementById("seat-" + d.seat + "-line");
+                const cards = document.getElementById("seat-" + d.seat + "-cards");
                 if (!box || !line) return;
-                box.classList.remove("to-act");
                 box.querySelector(".seat-title").textContent = d.title;
+                box.classList.remove("to-act");
                 line.textContent = (d.seat === 0) ? "Chips: –" : "–";
+                if (cards) cards.innerHTML = "";
             });
 
             const list = Array.isArray(players) ? players : [];
             list.forEach(p => {
                 const box = document.getElementById("seat-" + p.seat);
                 const line = document.getElementById("seat-" + p.seat + "-line");
+                const cards = document.getElementById("seat-" + p.seat + "-cards");
                 if (!box || !line) return;
+
                 box.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
                 let txt = "Chips: " + (p.chips ?? "-");
                 if (p.folded) txt += " (folded)";
+                if (currentSeat === p.seat) txt += " – To act";
+                line.textContent = txt;
+
                 if (currentSeat === p.seat) {
-                    txt += " – To act";
                     box.classList.add("to-act");
                 }
-                line.textContent = txt;
+
+                if (cards) {
+                    if (handRunning && !p.folded) {
+                        cards.innerHTML = `
+                            <div class="card-back-mini"></div>
+                            <div class="card-back-mini"></div>
+                        `;
+                    } else {
+                        cards.innerHTML = "";
+                    }
+                }
             });
         }
 
@@ -447,19 +378,9 @@ window.addEventListener("resize", updateTableScale);
             socket.emit("join_table", { name });
         });
 
-        document.getElementById("leave-btn").addEventListener("click", () => {
-            socket.emit("player_leave");
-            mySeat = null;
-            document.getElementById("seat-text").textContent = "-";
-            document.getElementById("hole-cards-text").textContent = "-";
-            document.getElementById("to-call-text").textContent = "0";
-            document.getElementById("join-status").textContent = "You left the table.";
-        });
-
         socket.on("join_result", data => {
             if (!data.success) {
-                const msg = data.error || "Unable to join.";
-                document.getElementById("join-status").textContent = msg;
+                document.getElementById("join-status").textContent = "Table full";
                 return;
             }
             mySeat = data.seat;
@@ -471,34 +392,21 @@ window.addEventListener("resize", updateTableScale);
             document.getElementById("pot-text").textContent = data.pot ?? 0;
             document.getElementById("street-text").textContent = data.street || "-";
             updateBoard(data.board || []);
-            updateSeats(data.players || [], data.current_player_seat);
+            updateSeats(data.players || [], data.current_player_seat, data.hand_running);
         });
 
         socket.on("hole_cards", data => {
             const cards = data.cards || [];
-            document.getElementById("hole-cards-text").innerHTML = prettyCardList(cards);
+            const html = cards.map(c =>
+                `<img src="${cardImageUrl(c)}" style="width:45px;height:65px;border-radius:6px;margin-right:4px;" class="deal-anim">`
+            ).join("");
+            document.getElementById("hole-cards-text").innerHTML = html || "-";
         });
 
         socket.on("request_action", data => {
             if (data.seat !== mySeat) return;
             toCall = data.to_call || 0;
             document.getElementById("to-call-text").textContent = toCall;
-        });
-
-        socket.on("table_reset", () => {
-            updateBoard([]);
-            updateSeats([], null);
-            document.getElementById("hole-cards-text").textContent = "-";
-            document.getElementById("to-call-text").textContent = "0";
-        });
-
-        socket.on("kicked", data => {
-            if (data.seat !== mySeat) return;
-            mySeat = null;
-            document.getElementById("seat-text").textContent = "-";
-            document.getElementById("hole-cards-text").textContent = "-";
-            document.getElementById("to-call-text").textContent = "0";
-            document.getElementById("join-status").textContent = "You were removed from the table.";
         });
 
         function sendAction(action, amount) {

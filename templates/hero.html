@@ -50,10 +50,6 @@
             background-color: #c58a20;
             color: #fff;
         }
-        #kick-btn {
-            background-color: #8c1e1e;
-            color: #fff;
-        }
 
         .mode-pill {
             padding: 4px 8px;
@@ -94,6 +90,7 @@
             background: radial-gradient(circle at top, #13542f, #06321a 65%, #04180f);
             position: relative;
         }
+
         .seat {
             position: absolute;
             width: 130px;
@@ -103,7 +100,12 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.5);
             font-size: 12px;
             text-align: left;
-            transition: box-shadow 0.2s ease, border 0.2s ease;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            border: 1px solid transparent;
+        }
+        .seat.to-act {
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
+            border-color: #ffd700;
         }
         .seat-title {
             font-weight: 700;
@@ -113,19 +115,25 @@
             font-size: 11px;
             opacity: 0.85;
         }
-        .seat.to-act {
-            box-shadow: 0 0 14px rgba(255, 215, 0, 0.9);
-            border: 1px solid #ffd700;
+        .seat-cards {
+            margin-top: 2px;
+            display: flex;
+            gap: 2px;
+        }
+        .card-back-mini {
+            width: 22px;
+            height: 30px;
+            border-radius: 4px;
+            background-image: url("/static/cards_renamed/back.png");
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
         }
 
         /* Seat positions – 7 seats around the oval */
-        #seat-0 {
-            top: 22px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        #seat-1 { top: 70px; left: 90px; }
-        #seat-2 { top: 70px; right: 90px; }
+        #seat-0 { top: 22px;  left: 50%; transform: translateX(-50%); }
+        #seat-1 { top: 70px;  left: 90px; }
+        #seat-2 { top: 70px;  right: 90px; }
         #seat-3 { top: 170px; right: 35px; }
         #seat-4 { bottom: 55px; right: 110px; }
         #seat-5 { bottom: 55px; left: 110px; }
@@ -151,6 +159,7 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.7);
             font-size: 20px;
             font-weight: 700;
+            overflow: hidden;
         }
         .center-info {
             position: absolute;
@@ -159,21 +168,6 @@
             transform: translate(-50%, 0);
             text-align: center;
             font-size: 12px;
-        }
-
-        .card-rank {
-            font-size: 20px;
-            font-weight: 700;
-        }
-        .card-suit {
-            margin-left: 2px;
-            font-size: 20px;
-        }
-        .red-suit {
-            color: #ff4d4d;
-        }
-        .black-suit {
-            color: #f5f5f5;
         }
 
         .panel-row {
@@ -217,7 +211,7 @@
         .hint-text {
             font-size: 11px;
             opacity: 0.8;
-            margin-top: 2px;
+            margin-top: 4px;
         }
 
         .stats-wrapper {
@@ -245,109 +239,55 @@
         tbody tr:nth-child(odd) {
             background: #041c15;
         }
-/* ============================
-   RESPONSIVE ADJUSTMENTS
-   ============================ */
 
-/* Large tablets and small laptops */
-@media (max-width: 1100px) {
-    .table-outer {
-        transform: scale(0.85);
-        transform-origin: top center;
-    }
+        /* Card images + animations */
+        .card-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            display: block;
+        }
+        .deal-anim {
+            animation: dealIn 0.25s ease-out;
+        }
+        @keyframes dealIn {
+            from {
+                transform: translateY(-20px) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
 
-    .panel-row, .bottom-panel {
-        flex-direction: column;
-        align-items: center;
-    }
+        .winner-card img {
+            box-shadow: 0 0 10px #ffd700, 0 0 18px #ffa500;
+        }
 
-    .panel, .player-panel {
-        width: 90%;
-    }
-
-    table {
-        width: 90%;
-    }
-}
-
-/* Tablets */
-@media (max-width: 800px) {
-    h1 {
-        font-size: 20px;
-    }
-
-    .table-outer {
-        transform: scale(0.70);
-        transform-origin: top center;
-    }
-
-    input, button {
-        font-size: 12px;
-        padding: 5px 8px;
-    }
-
-    .seat {
-        width: 100px;
-        font-size: 10px;
-        padding: 4px;
-    }
-
-    .board-card {
-        width: 45px;
-        height: 65px;
-        font-size: 16px;
-    }
-}
-
-/* Mobile phones */
-@media (max-width: 550px) {
-    body {
-        overflow-x: hidden;
-    }
-
-    h1 {
-        font-size: 18px;
-    }
-
-    .top-bar {
-        padding: 8px;
-        font-size: 12px;
-    }
-
-    .table-outer {
-        transform: scale(0.55);
-        transform-origin: top center;
-    }
-
-    .panel-row, .bottom-panel, .stats-wrapper {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .panel, .player-panel {
-        width: 95%;
-        font-size: 11px;
-        padding: 8px;
-    }
-
-    table {
-        width: 95%;
-        font-size: 11px;
-    }
-
-    .seat {
-        width: 90px;
-        font-size: 10px;
-        padding: 3px;
-    }
-
-    .board-card {
-        width: 40px;
-        height: 55px;
-        font-size: 15px;
-    }
-}
-
+        /* Responsive scaling */
+        @media (max-width: 1100px) {
+            .panel-row, .stats-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            .panel, table {
+                width: 90%;
+            }
+        }
+        @media (max-width: 600px) {
+            .top-bar {
+                padding: 8px;
+                font-size: 12px;
+            }
+            h1 {
+                font-size: 18px;
+            }
+            .panel, table {
+                width: 95%;
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -355,15 +295,14 @@
         <h1>Texas Hold’em – Hero / AI Coach</h1>
         Hero cards (e.g. As Kd):
         <input type="text" id="hero-cards-input" placeholder="As Kd" />
-        Flop (e.g. Ah Kc 7d):
+        Flop:
         <input type="text" id="flop-input" placeholder="Ah Kc 7d" />
-        Turn (e.g. 2s):
+        Turn:
         <input type="text" id="turn-input" placeholder="2s" />
-        River (e.g. 3c):
+        River:
         <input type="text" id="river-input" placeholder="3c" />
         <button id="start-hand-btn">Start Hand</button>
-        <button id="reset-btn">Reset Hand</button>
-	<button id="hard-reset-btn">Hard Reset</button>
+        <button id="reset-btn">Reset Table</button>
         <button id="download-csv-btn">Download CSV</button>
         <button id="update-board-btn">Update Board</button>
 
@@ -372,12 +311,6 @@
             <button id="mode-auto-btn" class="mode-btn active">Auto</button>
             <button id="mode-manual-btn" class="mode-btn inactive">Manual</button>
         </span>
-
-        <span class="mode-pill">
-            Kick seat:
-            <input type="number" id="kick-seat-input" min="1" max="6" style="width:40px; padding:2px 4px; font-size:12px;" />
-            <button id="kick-btn">Kick</button>
-        </span>
     </div>
 
     <div class="table-wrapper">
@@ -385,30 +318,37 @@
             <div class="seat" id="seat-0">
                 <span class="seat-title">Hero AI</span>
                 <span class="seat-line" id="seat-0-line">Chips: –</span>
+                <div class="seat-cards" id="seat-0-cards"></div>
             </div>
             <div class="seat" id="seat-1">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-1-line">–</span>
+                <div class="seat-cards" id="seat-1-cards"></div>
             </div>
             <div class="seat" id="seat-2">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-2-line">–</span>
+                <div class="seat-cards" id="seat-2-cards"></div>
             </div>
             <div class="seat" id="seat-3">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-3-line">–</span>
+                <div class="seat-cards" id="seat-3-cards"></div>
             </div>
             <div class="seat" id="seat-4">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-4-line">–</span>
+                <div class="seat-cards" id="seat-4-cards"></div>
             </div>
             <div class="seat" id="seat-5">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-5-line">–</span>
+                <div class="seat-cards" id="seat-5-cards"></div>
             </div>
             <div class="seat" id="seat-6">
                 <span class="seat-title">Empty</span>
                 <span class="seat-line" id="seat-6-line">–</span>
+                <div class="seat-cards" id="seat-6-cards"></div>
             </div>
 
             <div class="board-row">
@@ -444,7 +384,7 @@
                 <button id="hero-raise-btn">Raise</button>
             </div>
             <div class="hint-text">
-                In <strong>manual</strong> mode, click an action above to apply it.  
+                In <strong>manual</strong> mode, click an action above to apply it.
                 In <strong>auto</strong> mode, the AI acts automatically.
             </div>
         </div>
@@ -475,38 +415,6 @@
 
     <script>
         const socket = io();
-// -------- Dynamic table scaling based on viewport & device pixel ratio --------
-const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
-
-function updateTableScale() {
-    const table = document.querySelector(".table-outer");
-    if (!table) return;
-
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-    const dpr = window.devicePixelRatio || 1;
-
-    // We allow the table to take up to ~95% of the viewport width
-    const usableWidth = viewportWidth * 0.95;
-
-    // Base scale relative to the original 700px width
-    let scale = usableWidth / TABLE_BASE_WIDTH;
-
-    // Never upscale above 1 (keep original size on large screens)
-    if (scale > 1) scale = 1;
-
-    // On very high DPI screens, bump scale a little so it does not feel tiny
-    if (dpr >= 2) {
-        scale *= 1.05;
-        if (scale > 1) scale = 1;
-    }
-
-    table.style.transform = `scale(${scale})`;
-    table.style.transformOrigin = "top center";
-}
-
-// Run on load and on resize
-window.addEventListener("load", updateTableScale);
-window.addEventListener("resize", updateTableScale);
 
         let heroMode = "auto";
         let lastHeroDecision = null;
@@ -519,8 +427,31 @@ window.addEventListener("resize", updateTableScale);
         const heroRaiseBtn     = document.getElementById("hero-raise-btn");
         const heroRaiseInput   = document.getElementById("hero-raise-amount");
 
-        const kickSeatInput = document.getElementById("kick-seat-input");
-        const kickBtn       = document.getElementById("kick-btn");
+        // Dynamic table scaling
+        const TABLE_BASE_WIDTH = 700;
+        function updateTableScale() {
+            const table = document.querySelector(".table-outer");
+            if (!table) return;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
+            const usableWidth = viewportWidth * 0.95;
+            let scale = usableWidth / TABLE_BASE_WIDTH;
+            if (scale > 1) scale = 1;
+            if (dpr >= 2) {
+                scale *= 1.05;
+                if (scale > 1) scale = 1;
+            }
+            table.style.transform = `scale(${scale})`;
+            table.style.transformOrigin = "top center";
+        }
+        window.addEventListener("load", updateTableScale);
+        window.addEventListener("resize", updateTableScale);
+
+        // Map "Ah" → "/static/cards_renamed/Ah.png"
+        function cardImageUrl(code) {
+            if (!code || code.length < 2) return null;
+            return `/static/cards_renamed/${code}.png`;
+        }
 
         function setModeButtons(mode) {
             heroMode = mode;
@@ -540,35 +471,15 @@ window.addEventListener("resize", updateTableScale);
         modeAutoBtn.addEventListener("click", () => {
             socket.emit("hero_set_mode", { mode: "auto" });
         });
-
         modeManualBtn.addEventListener("click", () => {
             socket.emit("hero_set_mode", { mode: "manual" });
         });
-
-        kickBtn.addEventListener("click", () => {
-            const seatVal = parseInt(kickSeatInput.value || "0", 10);
-            if (!seatVal || seatVal < 1 || seatVal > 6) return;
-            socket.emit("hero_kick", { seat: seatVal });
-        });
-
-        function prettyCard(card) {
-            if (!card || card.length < 2) return card || "";
-            const rank = card[0];
-            const suitChar = card[1].toLowerCase();
-            const suitMap = { h: "♥", d: "♦", c: "♣", s: "♠" };
-            const suit = suitMap[suitChar] || suitChar;
-            const isRed = (suitChar === "h" || suitChar === "d");
-            return `<span class="card-rank">${rank}</span><span class="card-suit ${isRed ? "red-suit" : "black-suit"}">${suit}</span>`;
-        }
-
-        function prettyCardList(cards) {
-            return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
-        }
 
         function resetSeats() {
             for (let s = 0; s <= 6; s++) {
                 const seatBox = document.getElementById("seat-" + s);
                 const line = document.getElementById("seat-" + s + "-line");
+                const cards = document.getElementById("seat-" + s + "-cards");
                 if (!seatBox || !line) continue;
                 seatBox.classList.remove("to-act");
                 if (s === 0) {
@@ -578,35 +489,51 @@ window.addEventListener("resize", updateTableScale);
                     seatBox.querySelector(".seat-title").textContent = "Empty";
                     line.textContent = "–";
                 }
+                if (cards) cards.innerHTML = "";
             }
         }
 
-        function updateSeats(players, currentSeat) {
+        function updateSeats(players, currentSeat, handRunning) {
             resetSeats();
             (players || []).forEach(p => {
                 const id = "seat-" + p.seat;
                 const el = document.getElementById(id);
                 const line = document.getElementById(id + "-line");
+                const cards = document.getElementById(id + "-cards");
                 if (!el || !line) return;
+
                 el.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
                 let txt = "Chips: " + (p.chips ?? "-");
                 if (p.folded) txt += " (folded)";
+                if (currentSeat === p.seat) txt += " – To act";
+                line.textContent = txt;
+
                 if (currentSeat === p.seat) {
-                    txt += " – To act";
                     el.classList.add("to-act");
                 }
-                line.textContent = txt;
+
+                if (cards) {
+                    if (handRunning && !p.folded) {
+                        cards.innerHTML = `
+                            <div class="card-back-mini"></div>
+                            <div class="card-back-mini"></div>
+                        `;
+                    } else {
+                        cards.innerHTML = "";
+                    }
+                }
             });
         }
 
         function updateBoard(board) {
             for (let i = 0; i < 5; i++) {
                 const el = document.getElementById("board-" + i);
-                const card = board && board[i] ? board[i] : "?";
-                if (card === "?") {
-                    el.textContent = "?";
+                const card = board && board[i] ? board[i] : null;
+                if (!card) {
+                    el.innerHTML = "?";
                 } else {
-                    el.innerHTML = prettyCard(card);
+                    const url = cardImageUrl(card);
+                    el.innerHTML = `<img src="${url}" class="card-img deal-anim">`;
                 }
             }
         }
@@ -660,40 +587,21 @@ window.addEventListener("resize", updateTableScale);
             });
         });
 
-        // Soft reset: clear current hand, keep players and stats
-document.getElementById("reset-btn").addEventListener("click", () => {
-    socket.emit("hero_soft_reset");
-    updateBoard([]);
-    document.getElementById("pot-text").textContent = "0";
-    document.getElementById("street-text").textContent = "-";
-    document.getElementById("hero-hand-cards").textContent = "–";
-    document.getElementById("ai-action").textContent = "–";
-    document.getElementById("ai-amount").textContent = "–";
-    document.getElementById("ai-reason").textContent = "–";
-    document.getElementById("last-result-board").textContent = "Board: –";
-    document.getElementById("last-result-note").textContent = "Note: –";
-    document.getElementById("last-result-list").innerHTML = "";
-    // NOTE: we do NOT call resetSeats() or clear stats here
-});
-
-// Hard reset: full table wipe, remove players and stats
-document.getElementById("hard-reset-btn").addEventListener("click", () => {
-    if (!confirm("Hard reset will remove all players from the table. Continue?")) return;
-
-    socket.emit("reset_table");
-    updateBoard([]);
-    document.getElementById("pot-text").textContent = "0";
-    document.getElementById("street-text").textContent = "-";
-    document.getElementById("hero-hand-cards").textContent = "–";
-    document.getElementById("ai-action").textContent = "–";
-    document.getElementById("ai-amount").textContent = "–";
-    document.getElementById("ai-reason").textContent = "–";
-    document.getElementById("last-result-board").textContent = "Board: –";
-    document.getElementById("last-result-note").textContent = "Note: –";
-    document.getElementById("last-result-list").innerHTML = "";
-    resetSeats();
-    document.getElementById("player-stats-body").innerHTML = "";
-});
+        document.getElementById("reset-btn").addEventListener("click", () => {
+            socket.emit("reset_table");
+            updateBoard([]);
+            document.getElementById("pot-text").textContent = "0";
+            document.getElementById("street-text").textContent = "-";
+            document.getElementById("hero-hand-cards").textContent = "–";
+            document.getElementById("ai-action").textContent = "–";
+            document.getElementById("ai-amount").textContent = "–";
+            document.getElementById("ai-reason").textContent = "–";
+            document.getElementById("last-result-board").textContent = "Board: –";
+            document.getElementById("last-result-note").textContent = "Note: –";
+            document.getElementById("last-result-list").innerHTML = "";
+            resetSeats();
+            document.getElementById("player-stats-body").innerHTML = "";
+        });
 
         document.getElementById("download-csv-btn").addEventListener("click", () => {
             window.location.href = "/download_csv";
@@ -711,16 +619,14 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
             const boardStr = boardCards.join(" ");
             if (!boardStr) return;
 
-            socket.emit("hero_set_board", {
-                board_cards: boardStr
-            });
+            socket.emit("hero_set_board", { board_cards: boardStr });
         });
 
         socket.on("table_state", data => {
             document.getElementById("pot-text").textContent = data.pot ?? 0;
             document.getElementById("street-text").textContent = data.street || "-";
             updateBoard(data.board || []);
-            updateSeats(data.players || [], data.current_player_seat);
+            updateSeats(data.players || [], data.current_player_seat, data.hand_running);
         });
 
         socket.on("stats_update", data => {
@@ -730,7 +636,10 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
 
         socket.on("hero_hole_cards", data => {
             const cards = data.cards || [];
-            document.getElementById("hero-hand-cards").innerHTML = prettyCardList(cards);
+            const html = cards.map(c =>
+                `<img src="${cardImageUrl(c)}" style="width:50px;height:70px;border-radius:6px;margin-right:6px;" class="deal-anim">`
+            ).join("");
+            document.getElementById("hero-hand-cards").innerHTML = html || "–";
         });
 
         socket.on("hero_decision", data => {
@@ -738,10 +647,7 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
             document.getElementById("ai-action").textContent = data.action || "-";
             document.getElementById("ai-amount").textContent = data.amount ?? "–";
             document.getElementById("ai-reason").textContent = data.reason || "-";
-
-            if (data && data.mode) {
-                setModeButtons(data.mode);
-            }
+            if (data && data.mode) setModeButtons(data.mode);
         });
 
         socket.on("hero_mode", data => {
@@ -754,21 +660,22 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
             const players = data.players || [];
             const note = data.note || "";
 
-            const boardPretty = board.map(prettyCard).join(" ");
-            document.getElementById("last-result-board").innerHTML = "Board: " + boardPretty;
+            const boardHtml = board.map(c =>
+                `<img src="${cardImageUrl(c)}" style="width:45px;height:65px;border-radius:6px;margin-right:4px;">`
+            ).join("");
+            document.getElementById("last-result-board").innerHTML = "Board: " + (boardHtml || "–");
             document.getElementById("last-result-note").textContent = "Note: " + note;
 
             const ul = document.getElementById("last-result-list");
             ul.innerHTML = "";
             players.forEach(p => {
-                const cardsPretty = prettyCardList(p.hole_cards || []);
-                const winnerTag = p.winner ? "<strong> (WINNER)</strong>" : "";
+                const winnerClass = p.winner ? "winner-card" : "";
+                const cardsHtml = (p.hole_cards || []).map(c =>
+                    `<span class="${winnerClass}"><img src="${cardImageUrl(c)}" style="width:40px;height:55px;border-radius:6px;margin-right:2px;"></span>`
+                ).join("");
                 const foldedTag = p.folded ? "(folded)" : "";
-                const bestFive = p.best_five || [];
-                const bestPretty = bestFive.length ? prettyCardList(bestFive) : "";
-                const bestTag = p.winner && bestPretty ? ` – Best 5: ${bestPretty}` : "";
                 const li = document.createElement("li");
-                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${foldedTag} ${winnerTag}${bestTag}`;
+                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsHtml || "–"} ${foldedTag} ${p.winner ? "<strong>(WINNER)</strong>" : ""}`;
                 ul.appendChild(li);
             });
         });
@@ -784,11 +691,9 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
         heroFoldBtn.addEventListener("click", () => {
             sendHeroAction("FOLD", 0);
         });
-
         heroCheckCallBtn.addEventListener("click", () => {
             sendHeroAction("CALL", 0);
         });
-
         heroRaiseBtn.addEventListener("click", () => {
             let amt = parseInt(heroRaiseInput.value || "0", 10);
             if (!amt || amt <= 0) {
