@@ -99,35 +99,28 @@
             gap: 8px;
         }
 
-        .board-card-img {
-    width: 60px;
-    height: auto;
-    display: block;
-    border-radius: 6px;
-    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+        /* MATCH hero.html: container for PNG only */
+        .board-card {
+            width: auto;
+            height: auto;
+            padding: 0;
+            border: none;
+            background: none;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    /* To fix darkness on zoom */
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-}
-
-	.inline-card-img {
-    	width: 36px;
-    	height: auto;
-    	margin-right: 4px;
-    	vertical-align: middle;
-
-    	image-rendering: -webkit-optimize-contrast;
-    	image-rendering: crisp-edges;
-}
-
-        /* Actual PNG card face (same sizing as hero) */
+        /* Actual PNG card face – same style as hero */
         .board-card-img {
             width: 60px;
             height: auto;
             display: block;
             border-radius: 6px;
             box-shadow: 0 0 8px rgba(0,0,0,0.7);
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
         }
 
         .center-info {
@@ -139,12 +132,15 @@
             font-size: 12px;
         }
 
+        /* Small inline cards (hole cards text area) */
         .inline-card-img {
             width: 36px;
             height: auto;
             margin-right: 4px;
             vertical-align: middle;
             display: inline-block;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
         }
 
         .bottom-panel {
@@ -271,6 +267,10 @@
             .board-card-img {
                 width: 40px;
             }
+
+            .inline-card-img {
+                width: 32px;
+            }
         }
     </style>
 </head>
@@ -348,6 +348,7 @@
     <script>
         const socket = io();
 
+        // -------- Dynamic table scaling --------
         const TABLE_BASE_WIDTH = 700;
 
         function updateTableScale() {
@@ -376,7 +377,7 @@
         let mySeat = null;
         let toCall = 0;
 
-        // -------- PNG card helpers --------
+        // -------- PNG card helpers (same logic as hero.html) --------
         function cardImgHTML(card) {
             if (!card || card.length < 2) return "";
             const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
