@@ -156,6 +156,35 @@ def reset_game():
     broadcast_state()
     broadcast_stats()
 
+def soft_reset():
+    """Clear current hand state but keep players and stats."""
+    # Clear per-player hand state
+    for p in game.players:
+        p.hole_cards = []
+        p.folded = False
+
+    # Clear table / hand state
+    game.deck = []
+    game.full_board = []
+    game.board = []
+    game.pot = 0
+    game.street = None
+    game.current_bet = 0
+    game.current_player_seat = None
+    game.to_act = set()
+    game.hand_running = False
+
+    # Tell clients that hole cards are now empty
+    for p in game.players:
+        if p.sid:
+            socketio.emit("hole_cards", {"cards": []}, room=p.sid)
+
+    hero = find_player_by_seat(HERO_SEAT)
+    if hero:
+        socketio.emit("hero_hole_cards", {"cards": []}, room=TABLE_ROOM)
+
+    broadcast_state()
+    broadcast_stats()
 
 def evaluate_5(cards5):
     """Return (category, tiebreakers list) for 5-card hand.
@@ -825,6 +854,9 @@ def on_hero_reset():
 def on_reset_table():
     reset_game()
 
+@socketio.on("hero_soft_reset")
+def on_hero_soft_reset():
+    soft_reset()
 
 @socketio.on("hero_set_mode")
 def on_hero_set_mode(data):
