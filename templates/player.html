@@ -99,18 +99,27 @@
             gap: 8px;
         }
 
-        /* Make board cell just a neutral container */
-        .board-card {
-            width: auto;
-            height: auto;
-            padding: 0;
-            border: none;
-            background: none;
-            box-shadow: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .board-card-img {
+    width: 60px;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+
+    /* To fix darkness on zoom */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+	.inline-card-img {
+    	width: 36px;
+    	height: auto;
+    	margin-right: 4px;
+    	vertical-align: middle;
+
+    	image-rendering: -webkit-optimize-contrast;
+    	image-rendering: crisp-edges;
+}
 
         /* Actual PNG card face (same sizing as hero) */
         .board-card-img {
