@@ -108,10 +108,15 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 0 8px rgba(0,0,0,0.7);
-            font-size: 20px;
-            font-weight: 700;
             overflow: hidden;
         }
+
+        .board-card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
         .center-info {
             position: absolute;
             top: 58%;
@@ -121,17 +126,11 @@
             font-size: 12px;
         }
 
-        /* PNG card images */
         .inline-card-img {
             width: 36px;
             height: auto;
             margin-right: 4px;
             vertical-align: middle;
-        }
-        .board-card-img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
         }
 
         .bottom-panel {
@@ -168,7 +167,6 @@
            RESPONSIVE ADJUSTMENTS
            ============================ */
 
-        /* Large tablets and small laptops */
         @media (max-width: 1100px) {
             .table-outer {
                 transform: scale(0.85);
@@ -189,7 +187,6 @@
             }
         }
 
-        /* Tablets */
         @media (max-width: 800px) {
             h1 {
                 font-size: 20px;
@@ -214,11 +211,9 @@
             .board-card {
                 width: 45px;
                 height: 65px;
-                font-size: 16px;
             }
         }
 
-        /* Mobile phones */
         @media (max-width: 550px) {
             body {
                 overflow-x: hidden;
@@ -263,7 +258,6 @@
             .board-card {
                 width: 40px;
                 height: 55px;
-                font-size: 15px;
             }
         }
     </style>
@@ -342,8 +336,8 @@
     <script>
         const socket = io();
 
-        // -------- Dynamic table scaling based on viewport & device pixel ratio --------
-        const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
+        // -------- Dynamic table scaling --------
+        const TABLE_BASE_WIDTH = 700;
 
         function updateTableScale() {
             const table = document.querySelector(".table-outer");
@@ -352,16 +346,10 @@
             const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
             const dpr = window.devicePixelRatio || 1;
 
-            // We allow the table to take up to ~95% of the viewport width
             const usableWidth = viewportWidth * 0.95;
-
-            // Base scale relative to the original 700px width
             let scale = usableWidth / TABLE_BASE_WIDTH;
-
-            // Never upscale above 1 (keep original size on large screens)
             if (scale > 1) scale = 1;
 
-            // On very high DPI screens, bump scale a little so it does not feel tiny
             if (dpr >= 2) {
                 scale *= 1.05;
                 if (scale > 1) scale = 1;
@@ -371,17 +359,15 @@
             table.style.transformOrigin = "top center";
         }
 
-        // Run on load and on resize
         window.addEventListener("load", updateTableScale);
         window.addEventListener("resize", updateTableScale);
 
         let mySeat = null;
         let toCall = 0;
 
-        // -------- PNG card helpers (same naming as hero) --------
+        // -------- PNG card helpers --------
         function cardImgHTML(card) {
             if (!card || card.length < 2) return "";
-            // strip any spaces or junk and keep rank+suit only
             const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
             if (safe.length !== 2) return "";
             return `<img src="/static/cards_renamed/${safe}.png" class="inline-card-img">`;
