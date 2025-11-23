@@ -50,6 +50,10 @@
             background-color: #c58a20;
             color: #fff;
         }
+        #kick-btn {
+            background-color: #8c1e1e;
+            color: #fff;
+        }
 
         .mode-pill {
             padding: 4px 8px;
@@ -99,6 +103,7 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.5);
             font-size: 12px;
             text-align: left;
+            transition: box-shadow 0.2s ease, border 0.2s ease;
         }
         .seat-title {
             font-weight: 700;
@@ -107,6 +112,10 @@
         .seat-line {
             font-size: 11px;
             opacity: 0.85;
+        }
+        .seat.to-act {
+            box-shadow: 0 0 14px rgba(255, 215, 0, 0.9);
+            border: 1px solid #ffd700;
         }
 
         /* Seat positions – 7 seats around the oval */
@@ -259,6 +268,12 @@
             <button id="mode-auto-btn" class="mode-btn active">Auto</button>
             <button id="mode-manual-btn" class="mode-btn inactive">Manual</button>
         </span>
+
+        <span class="mode-pill">
+            Kick seat:
+            <input type="number" id="kick-seat-input" min="1" max="6" style="width:40px; padding:2px 4px; font-size:12px;" />
+            <button id="kick-btn">Kick</button>
+        </span>
     </div>
 
     <div class="table-wrapper">
@@ -368,6 +383,9 @@
         const heroRaiseBtn     = document.getElementById("hero-raise-btn");
         const heroRaiseInput   = document.getElementById("hero-raise-amount");
 
+        const kickSeatInput = document.getElementById("kick-seat-input");
+        const kickBtn       = document.getElementById("kick-btn");
+
         function setModeButtons(mode) {
             heroMode = mode;
             if (mode === "auto") {
@@ -391,6 +409,12 @@
             socket.emit("hero_set_mode", { mode: "manual" });
         });
 
+        kickBtn.addEventListener("click", () => {
+            const seatVal = parseInt(kickSeatInput.value || "0", 10);
+            if (!seatVal || seatVal < 1 || seatVal > 6) return;
+            socket.emit("hero_kick", { seat: seatVal });
+        });
+
         function prettyCard(card) {
             if (!card || card.length < 2) return card || "";
             const rank = card[0];
@@ -410,6 +434,7 @@
                 const seatBox = document.getElementById("seat-" + s);
                 const line = document.getElementById("seat-" + s + "-line");
                 if (!seatBox || !line) continue;
+                seatBox.classList.remove("to-act");
                 if (s === 0) {
                     seatBox.querySelector(".seat-title").textContent = "Hero AI";
                     line.textContent = "Chips: –";
@@ -430,7 +455,10 @@
                 el.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
                 let txt = "Chips: " + (p.chips ?? "-");
                 if (p.folded) txt += " (folded)";
-                if (currentSeat === p.seat) txt += " – To act";
+                if (currentSeat === p.seat) {
+                    txt += " – To act";
+                    el.classList.add("to-act");
+                }
                 line.textContent = txt;
             });
         }
@@ -581,8 +609,11 @@
                 const cardsPretty = prettyCardList(p.hole_cards || []);
                 const winnerTag = p.winner ? "<strong> (WINNER)</strong>" : "";
                 const foldedTag = p.folded ? "(folded)" : "";
+                const bestFive = p.best_five || [];
+                const bestPretty = bestFive.length ? prettyCardList(bestFive) : "";
+                const bestTag = p.winner && bestPretty ? ` – Best 5: ${bestPretty}` : "";
                 const li = document.createElement("li");
-                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${foldedTag} ${winnerTag}`;
+                li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${foldedTag} ${winnerTag}${bestTag}`;
                 ul.appendChild(li);
             });
         });

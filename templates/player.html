@@ -37,6 +37,11 @@
             background-color: #1e8c3a;
             color: #fff;
         }
+        #leave-btn {
+            background-color: #b3472f;
+            color: #fff;
+            margin-left: 6px;
+        }
 
         .table-wrapper {
             display: flex;
@@ -61,6 +66,7 @@
             box-shadow: 0 0 8px rgba(0,0,0,0.5);
             font-size: 12px;
             text-align: left;
+            transition: box-shadow 0.2s ease, border 0.2s ease;
         }
         .seat-title {
             font-weight: 700;
@@ -69,6 +75,10 @@
         .seat-line {
             font-size: 11px;
             opacity: 0.85;
+        }
+        .seat.to-act {
+            box-shadow: 0 0 14px rgba(255, 215, 0, 0.9);
+            border: 1px solid #ffd700;
         }
 
         /* Seat positions – 7 seats around the oval */
@@ -161,6 +171,7 @@
         <h1>Poker Table – Player</h1>
         <input type="text" id="name-input" placeholder="Your name" />
         <button id="join-btn">Join Table</button>
+        <button id="leave-btn">Leave Table</button>
         <span id="join-status"></span>
     </div>
 
@@ -274,6 +285,7 @@
                 const box = document.getElementById("seat-" + d.seat);
                 const line = document.getElementById("seat-" + d.seat + "-line");
                 if (!box || !line) return;
+                box.classList.remove("to-act");
                 box.querySelector(".seat-title").textContent = d.title;
                 line.textContent = (d.seat === 0) ? "Chips: –" : "–";
             });
@@ -286,7 +298,10 @@
                 box.querySelector(".seat-title").textContent = p.name || ("Seat " + p.seat);
                 let txt = "Chips: " + (p.chips ?? "-");
                 if (p.folded) txt += " (folded)";
-                if (currentSeat === p.seat) txt += " – To act";
+                if (currentSeat === p.seat) {
+                    txt += " – To act";
+                    box.classList.add("to-act");
+                }
                 line.textContent = txt;
             });
         }
@@ -296,9 +311,19 @@
             socket.emit("join_table", { name });
         });
 
+        document.getElementById("leave-btn").addEventListener("click", () => {
+            socket.emit("player_leave");
+            mySeat = null;
+            document.getElementById("seat-text").textContent = "-";
+            document.getElementById("hole-cards-text").textContent = "-";
+            document.getElementById("to-call-text").textContent = "0";
+            document.getElementById("join-status").textContent = "You left the table.";
+        });
+
         socket.on("join_result", data => {
             if (!data.success) {
-                document.getElementById("join-status").textContent = "Table full";
+                const msg = data.error || "Unable to join.";
+                document.getElementById("join-status").textContent = msg;
                 return;
             }
             mySeat = data.seat;
@@ -322,6 +347,22 @@
             if (data.seat !== mySeat) return;
             toCall = data.to_call || 0;
             document.getElementById("to-call-text").textContent = toCall;
+        });
+
+        socket.on("table_reset", () => {
+            updateBoard([]);
+            updateSeats([], null);
+            document.getElementById("hole-cards-text").textContent = "-";
+            document.getElementById("to-call-text").textContent = "0";
+        });
+
+        socket.on("kicked", data => {
+            if (data.seat !== mySeat) return;
+            mySeat = null;
+            document.getElementById("seat-text").textContent = "-";
+            document.getElementById("hole-cards-text").textContent = "-";
+            document.getElementById("to-call-text").textContent = "0";
+            document.getElementById("join-status").textContent = "You were removed from the table.";
         });
 
         function sendAction(action, amount) {

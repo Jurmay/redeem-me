@@ -123,6 +123,8 @@ def record_hand(result):
                 "hole_cards": list(p["hole_cards"]),
                 "folded": p["folded"],
                 "winner": p.get("winner", False),
+                # keep best_five if present
+                "best_five": list(p.get("best_five", [])),
             }
             for p in result.get("players", [])
         ],
@@ -182,7 +184,7 @@ def evaluate_5(cards5):
             if window[4] - window[0] == 4:
                 is_straight = True
                 high_straight = window[4]
-        if set([14, 2, 3, 4, 5]).issubset(set(ranks)):
+        if {14, 2, 3, 4, 5}.issubset(set(ranks)):
             is_straight = True
             high_straight = 5
 
@@ -233,7 +235,7 @@ def evaluate_5(cards5):
 
 
 def evaluate_7(cards7):
-    """Best 5-card hand out of 7."""
+    """Best 5-card hand out of 7, returning rank only."""
     best = None
     for combo in combinations(cards7, 5):
         rank = evaluate_5(combo)
@@ -242,8 +244,20 @@ def evaluate_7(cards7):
     return best
 
 
+def best_5_from_7(cards7):
+    """Return (rank, best_five_cards) for best 5 out of 7."""
+    best_rank = None
+    best_combo = None
+    for combo in combinations(cards7, 5):
+        rank = evaluate_5(combo)
+        if best_rank is None or rank > best_rank:
+            best_rank = rank
+            best_combo = list(combo)
+    return best_rank, best_combo
+
+
 def build_showdown_result():
-    """Create result dict including winner info."""
+    """Create result dict including winner info and best 5-card hand."""
     players_info = []
 
     if len(game.board) < 5:
@@ -254,6 +268,7 @@ def build_showdown_result():
                 "hole_cards": list(p.hole_cards),
                 "folded": p.folded,
                 "winner": False,
+                "best_five": [],
             })
         note = "Showdown with incomplete board – winner not evaluated."
         return {
@@ -262,31 +277,39 @@ def build_showdown_result():
             "note": note,
         }
 
-    active_evals = []
+    # First build base info
     for p in game.players:
-        info = {
+        players_info.append({
             "seat": p.seat,
             "name": p.name,
             "hole_cards": list(p.hole_cards),
             "folded": p.folded,
             "winner": False,
-        }
-        players_info.append(info)
+            "best_five": [],
+        })
 
+    # Evaluate active players and track best 5-card combo
+    active_evals = []
+    seat_to_best5 = {}
     best_rank = None
+
     for p in game.players:
         if p.folded or len(p.hole_cards) < 2:
             continue
         cards7 = p.hole_cards + game.board
-        rank = evaluate_7(cards7)
+        rank, best5 = best_5_from_7(cards7)
         active_evals.append((p.seat, rank))
+        seat_to_best5[p.seat] = best5
         if best_rank is None or rank > best_rank:
             best_rank = rank
 
     winners = [seat for seat, r in active_evals if r == best_rank]
+
     for info in players_info:
         if info["seat"] in winners:
             info["winner"] = True
+        if info["seat"] in seat_to_best5:
+            info["best_five"] = seat_to_best5[info["seat"]]
 
     if winners:
         winner_names = [
@@ -343,6 +366,42 @@ def manual_set_board(board_str):
         game.full_board = full[:5]
 
     broadcast_state()
+
+
+def check_hand_end_if_one_left():
+    """If only one active seat remains, immediately end the hand."""
+    remaining = [s for s in active_seats()]
+    if len(remaining) <= 1 and game.hand_running:
+        players_info = []
+        for p in game.players:
+            players_info.append({
+                "seat": p.seat,
+                "name": p.name,
+                "hole_cards": list(p.hole_cards),
+                "folded": p.folded,
+                "winner": (not p.folded),
+                "best_five": [],
+            })
+        winner_names = [
+            f"Seat {p['seat']} – {p['name']}"
+            for p in players_info if p["winner"]
+        ]
+        note = "Hand ended because all but one player folded."
+        if winner_names:
+            note += " Winner: " + ", ".join(winner_names)
+
+        result = {
+            "board": list(game.board),
+            "players": players_info,
+            "note": note,
+        }
+        record_hand(result)
+        socketio.emit("hand_result", result, room=TABLE_ROOM)
+        game.hand_running = False
+        broadcast_state()
+        broadcast_stats()
+        return True
+    return False
 
 
 # ---------- Dealing & Streets ----------
@@ -587,35 +646,7 @@ def apply_action(player, action, amount, is_hero=False):
         game.to_act = set(s for s in active_seats() if s != seat)
 
     # If only one left, end hand immediately
-    remaining = [s for s in active_seats()]
-    if len(remaining) <= 1 and game.hand_running:
-        players_info = []
-        for p in game.players:
-            players_info.append({
-                "seat": p.seat,
-                "name": p.name,
-                "hole_cards": list(p.hole_cards),
-                "folded": p.folded,
-                "winner": (not p.folded),
-            })
-        winner_names = [
-            f"Seat {p['seat']} – {p['name']}"
-            for p in players_info if p["winner"]
-        ]
-        note = "Hand ended because all but one player folded."
-        if winner_names:
-            note += " Winner: " + ", ".join(winner_names)
-
-        result = {
-            "board": list(game.board),
-            "players": players_info,
-            "note": note,
-        }
-        record_hand(result)
-        socketio.emit("hand_result", result, room=TABLE_ROOM)
-        game.hand_running = False
-        broadcast_state()
-        broadcast_stats()
+    if check_hand_end_if_one_left():
         return
 
     game.current_player_seat = seat_order_after(seat)
@@ -649,6 +680,7 @@ def _history_csv_response():
         "hole_cards",
         "folded",
         "winner",
+        "best_five",
     ])
 
     for hand_id, hand in enumerate(game.hand_history, start=1):
@@ -656,6 +688,7 @@ def _history_csv_response():
         note = hand.get("note", "")
         for p in hand["players"]:
             hole_str = " ".join(p["hole_cards"])
+            best_str = " ".join(p.get("best_five", []))
             writer.writerow([
                 hand_id,
                 board_str,
@@ -665,6 +698,7 @@ def _history_csv_response():
                 hole_str,
                 p["folded"],
                 p.get("winner", False),
+                best_str,
             ])
 
     csv_data = output.getvalue()
@@ -697,6 +731,13 @@ def on_join(data):
     name = data.get("name") or "Guest"
     sid = request.sid
 
+    # Prevent duplicate names (case-insensitive)
+    lowered = name.lower()
+    for p in game.players:
+        if p.name.lower() == lowered:
+            emit("join_result", {"success": False, "error": "Name already in use"})
+            return
+
     used_seats = {p.seat for p in game.players}
     seat = None
     for s in range(1, 7):
@@ -721,6 +762,27 @@ def on_join(data):
     broadcast_stats()
 
 
+@socketio.on("player_leave")
+def on_player_leave():
+    sid = request.sid
+    seat = sid_to_seat.get(sid)
+    if seat is None:
+        return
+    p = find_player_by_seat(seat)
+    if p:
+        if game.hand_running:
+            p.folded = True
+            game.to_act.discard(seat)
+            if check_hand_end_if_one_left():
+                pass
+        if p in game.players:
+            game.players.remove(p)
+    if sid in sid_to_seat:
+        del sid_to_seat[sid]
+    broadcast_state()
+    broadcast_stats()
+
+
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
@@ -728,9 +790,15 @@ def on_disconnect():
     if seat is not None:
         p = find_player_by_seat(seat)
         if p:
-            p.folded = True
+            if game.hand_running:
+                p.folded = True
+                game.to_act.discard(seat)
+                check_hand_end_if_one_left()
+            if p in game.players:
+                game.players.remove(p)
         del sid_to_seat[sid]
     broadcast_state()
+    broadcast_stats()
 
 
 @socketio.on("hero_start_hand")
@@ -789,6 +857,38 @@ def on_hero_action(data):
 def on_hero_set_board(data):
     board_cards = data.get("board_cards") or ""
     manual_set_board(board_cards)
+
+
+@socketio.on("hero_kick")
+def on_hero_kick(data):
+    seat = data.get("seat")
+    if seat is None or seat == HERO_SEAT:
+        return
+    p = find_player_by_seat(seat)
+    if not p:
+        return
+
+    # Find and notify the client, if any
+    kick_sid = None
+    for s, seat_num in list(sid_to_seat.items()):
+        if seat_num == seat:
+            kick_sid = s
+            break
+
+    if game.hand_running:
+        p.folded = True
+        game.to_act.discard(seat)
+        check_hand_end_if_one_left()
+
+    if p in game.players:
+        game.players.remove(p)
+
+    if kick_sid:
+        socketio.emit("kicked", {"seat": seat}, room=kick_sid)
+        del sid_to_seat[kick_sid]
+
+    broadcast_state()
+    broadcast_stats()
 
 
 @socketio.on("player_action")
