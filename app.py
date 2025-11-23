@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, make_response
 from flask_socketio import SocketIO, emit, join_room
 import os
 import random
+from hero_ai_logic import hero_ai_decision
 import io
 import csv
 from itertools import combinations

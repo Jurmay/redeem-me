@@ -98,19 +98,31 @@
             display: flex;
             gap: 8px;
         }
+
+        /* MATCH hero.html: container for PNG only */
         .board-card {
-            width: 60px;
-            height: 80px;
-            border-radius: 8px;
-            border: 2px solid #1d3d32;
-            background: linear-gradient(135deg, #0f2720, #16382d);
+            width: auto;
+            height: auto;
+            padding: 0;
+            border: none;
+            background: none;
+            box-shadow: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 8px rgba(0,0,0,0.7);
-            font-size: 20px;
-            font-weight: 700;
         }
+
+        /* Actual PNG card face – same style as hero */
+        .board-card-img {
+            width: 60px;
+            height: auto;
+            display: block;
+            border-radius: 6px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.7);
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+
         .center-info {
             position: absolute;
             top: 58%;
@@ -120,19 +132,15 @@
             font-size: 12px;
         }
 
-        .card-rank {
-            font-size: 20px;
-            font-weight: 700;
-        }
-        .card-suit {
-            margin-left: 2px;
-            font-size: 20px;
-        }
-        .red-suit {
-            color: #ff4d4d;
-        }
-        .black-suit {
-            color: #f5f5f5;
+        /* Small inline cards (hole cards text area) */
+        .inline-card-img {
+            width: 36px;
+            height: auto;
+            margin-right: 4px;
+            vertical-align: middle;
+            display: inline-block;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
         }
 
         .bottom-panel {
@@ -164,110 +172,106 @@
         .actions-row input {
             width: 60px;
         }
-/* ============================
-   RESPONSIVE ADJUSTMENTS
-   ============================ */
 
-/* Large tablets and small laptops */
-@media (max-width: 1100px) {
-    .table-outer {
-        transform: scale(0.85);
-        transform-origin: top center;
-    }
+        /* ============================
+           RESPONSIVE ADJUSTMENTS
+           ============================ */
 
-    .panel-row, .bottom-panel {
-        flex-direction: column;
-        align-items: center;
-    }
+        @media (max-width: 1100px) {
+            .table-outer {
+                transform: scale(0.85);
+                transform-origin: top center;
+            }
 
-    .panel, .player-panel {
-        width: 90%;
-    }
+            .panel-row, .bottom-panel {
+                flex-direction: column;
+                align-items: center;
+            }
 
-    table {
-        width: 90%;
-    }
-}
+            .panel, .player-panel {
+                width: 90%;
+            }
 
-/* Tablets */
-@media (max-width: 800px) {
-    h1 {
-        font-size: 20px;
-    }
+            table {
+                width: 90%;
+            }
+        }
 
-    .table-outer {
-        transform: scale(0.70);
-        transform-origin: top center;
-    }
+        @media (max-width: 800px) {
+            h1 {
+                font-size: 20px;
+            }
 
-    input, button {
-        font-size: 12px;
-        padding: 5px 8px;
-    }
+            .table-outer {
+                transform: scale(0.70);
+                transform-origin: top center;
+            }
 
-    .seat {
-        width: 100px;
-        font-size: 10px;
-        padding: 4px;
-    }
+            input, button {
+                font-size: 12px;
+                padding: 5px 8px;
+            }
 
-    .board-card {
-        width: 45px;
-        height: 65px;
-        font-size: 16px;
-    }
-}
+            .seat {
+                width: 100px;
+                font-size: 10px;
+                padding: 4px;
+            }
 
-/* Mobile phones */
-@media (max-width: 550px) {
-    body {
-        overflow-x: hidden;
-    }
+            .board-card-img {
+                width: 45px;
+            }
+        }
 
-    h1 {
-        font-size: 18px;
-    }
+        @media (max-width: 550px) {
+            body {
+                overflow-x: hidden;
+            }
 
-    .top-bar {
-        padding: 8px;
-        font-size: 12px;
-    }
+            h1 {
+                font-size: 18px;
+            }
 
-    .table-outer {
-        transform: scale(0.55);
-        transform-origin: top center;
-    }
+            .top-bar {
+                padding: 8px;
+                font-size: 12px;
+            }
 
-    .panel-row, .bottom-panel, .stats-wrapper {
-        flex-direction: column;
-        align-items: center;
-    }
+            .table-outer {
+                transform: scale(0.55);
+                transform-origin: top center;
+            }
 
-    .panel, .player-panel {
-        width: 95%;
-        font-size: 11px;
-        padding: 8px;
-    }
+            .panel-row, .bottom-panel, .stats-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
 
-    table {
-        width: 95%;
-        font-size: 11px;
-    }
+            .panel, .player-panel {
+                width: 95%;
+                font-size: 11px;
+                padding: 8px;
+            }
 
-    .seat {
-        width: 90px;
-        font-size: 10px;
-        padding: 3px;
-    }
+            table {
+                width: 95%;
+                font-size: 11px;
+            }
 
-    .board-card {
-        width: 40px;
-        height: 55px;
-        font-size: 15px;
-    }
-}
+            .seat {
+                width: 90px;
+                font-size: 10px;
+                padding: 3px;
+            }
 
+            .board-card-img {
+                width: 40px;
+            }
 
+            .inline-card-img {
+                width: 32px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -343,54 +347,46 @@
 
     <script>
         const socket = io();
-// -------- Dynamic table scaling based on viewport & device pixel ratio --------
-const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
 
-function updateTableScale() {
-    const table = document.querySelector(".table-outer");
-    if (!table) return;
+        // -------- Dynamic table scaling --------
+        const TABLE_BASE_WIDTH = 700;
 
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-    const dpr = window.devicePixelRatio || 1;
+        function updateTableScale() {
+            const table = document.querySelector(".table-outer");
+            if (!table) return;
 
-    // We allow the table to take up to ~95% of the viewport width
-    const usableWidth = viewportWidth * 0.95;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
 
-    // Base scale relative to the original 700px width
-    let scale = usableWidth / TABLE_BASE_WIDTH;
+            const usableWidth = viewportWidth * 0.95;
+            let scale = usableWidth / TABLE_BASE_WIDTH;
+            if (scale > 1) scale = 1;
 
-    // Never upscale above 1 (keep original size on large screens)
-    if (scale > 1) scale = 1;
+            if (dpr >= 2) {
+                scale *= 1.05;
+                if (scale > 1) scale = 1;
+            }
 
-    // On very high DPI screens, bump scale a little so it does not feel tiny
-    if (dpr >= 2) {
-        scale *= 1.05;
-        if (scale > 1) scale = 1;
-    }
+            table.style.transform = `scale(${scale})`;
+            table.style.transformOrigin = "top center";
+        }
 
-    table.style.transform = `scale(${scale})`;
-    table.style.transformOrigin = "top center";
-}
-
-// Run on load and on resize
-window.addEventListener("load", updateTableScale);
-window.addEventListener("resize", updateTableScale);
+        window.addEventListener("load", updateTableScale);
+        window.addEventListener("resize", updateTableScale);
 
         let mySeat = null;
         let toCall = 0;
 
-        function prettyCard(card) {
-            if (!card || card.length < 2) return card || "";
-            const rank = card[0];
-            const suitChar = card[1].toLowerCase();
-            const suitMap = { h: "♥", d: "♦", c: "♣", s: "♠" };
-            const suit = suitMap[suitChar] || suitChar;
-            const isRed = (suitChar === "h" || suitChar === "d");
-            return `<span class="card-rank">${rank}</span><span class="card-suit ${isRed ? "red-suit" : "black-suit"}">${suit}</span>`;
+        // -------- PNG card helpers (same logic as hero.html) --------
+        function cardImgHTML(card) {
+            if (!card || card.length < 2) return "";
+            const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
+            if (safe.length !== 2) return "";
+            return `<img src="/static/cards_renamed/${safe}.png" class="inline-card-img">`;
         }
 
-        function prettyCardList(cards) {
-            return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
+        function cardImgListHTML(cards) {
+            return (cards || []).map(c => cardImgHTML(c)).join("");
         }
 
         function updateBoard(board) {
@@ -398,10 +394,12 @@ window.addEventListener("resize", updateTableScale);
                 const el = document.getElementById("board-" + i);
                 const card = board && board[i] ? board[i] : "?";
                 if (!el) continue;
-                if (card === "?") {
+
+                if (!card || card === "?") {
                     el.textContent = "?";
                 } else {
-                    el.innerHTML = prettyCard(card);
+                    const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
+                    el.innerHTML = `<img src="/static/cards_renamed/${safe}.png" class="board-card-img">`;
                 }
             }
         }
@@ -476,7 +474,7 @@ window.addEventListener("resize", updateTableScale);
 
         socket.on("hole_cards", data => {
             const cards = data.cards || [];
-            document.getElementById("hole-cards-text").innerHTML = prettyCardList(cards);
+            document.getElementById("hole-cards-text").innerHTML = cardImgListHTML(cards);
         });
 
         socket.on("request_action", data => {

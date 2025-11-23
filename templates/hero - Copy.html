@@ -139,19 +139,28 @@
             display: flex;
             gap: 8px;
         }
-        .board-card {
-            width: 60px;
-            height: 80px;
-            border-radius: 8px;
-            border: 2px solid #1d3d32;
-            background: linear-gradient(135deg, #0f2720, #16382d);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 8px rgba(0,0,0,0.7);
-            font-size: 20px;
-            font-weight: 700;
-        }
+      .board-card {
+    /* The card is now just a container for the PNG */
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Actual PNG card face */
+.board-card-img {
+    width: 60px;        /* adjust if you want bigger/smaller cards */
+    height: auto;
+    display: block;
+    border-radius: 6px; /* optional – keep or remove */
+    box-shadow: 0 0 8px rgba(0,0,0,0.7);  /* optional glow around PNG */
+}
+
         .center-info {
             position: absolute;
             top: 58%;
@@ -160,6 +169,21 @@
             text-align: center;
             font-size: 12px;
         }
+
+        /* Card images */
+        .board-card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+       .inline-card-img {
+   	 width: 36px;      /* size for small cards in text areas */
+    	height: auto;
+    	margin-right: 4px;
+   	 vertical-align: middle;
+    	display: inline-block;
+}
+
 
         .card-rank {
             font-size: 20px;
@@ -245,109 +269,117 @@
         tbody tr:nth-child(odd) {
             background: #041c15;
         }
-/* ============================
-   RESPONSIVE ADJUSTMENTS
-   ============================ */
 
-/* Large tablets and small laptops */
-@media (max-width: 1100px) {
-    .table-outer {
-        transform: scale(0.85);
-        transform-origin: top center;
-    }
+        /* ============================
+           RESPONSIVE ADJUSTMENTS
+           ============================ */
 
-    .panel-row, .bottom-panel {
-        flex-direction: column;
-        align-items: center;
-    }
+        /* Large tablets and small laptops */
+        @media (max-width: 1100px) {
+            .table-outer {
+                transform: scale(0.85);
+                transform-origin: top center;
+            }
 
-    .panel, .player-panel {
-        width: 90%;
-    }
+            .panel-row, .bottom-panel {
+                flex-direction: column;
+                align-items: center;
+            }
 
-    table {
-        width: 90%;
-    }
-}
+            .panel, .player-panel {
+                width: 90%;
+            }
 
-/* Tablets */
-@media (max-width: 800px) {
-    h1 {
-        font-size: 20px;
-    }
+            table {
+                width: 90%;
+            }
+        }
 
-    .table-outer {
-        transform: scale(0.70);
-        transform-origin: top center;
-    }
+        /* Tablets */
+        @media (max-width: 800px) {
+            h1 {
+                font-size: 20px;
+            }
 
-    input, button {
-        font-size: 12px;
-        padding: 5px 8px;
-    }
+            .table-outer {
+                transform: scale(0.70);
+                transform-origin: top center;
+            }
 
-    .seat {
-        width: 100px;
-        font-size: 10px;
-        padding: 4px;
-    }
+            input, button {
+                font-size: 12px;
+                padding: 5px 8px;
+            }
 
-    .board-card {
-        width: 45px;
-        height: 65px;
-        font-size: 16px;
-    }
-}
+            .seat {
+                width: 100px;
+                font-size: 10px;
+                padding: 4px;
+            }
 
-/* Mobile phones */
-@media (max-width: 550px) {
-    body {
-        overflow-x: hidden;
-    }
+            .board-card {
+                width: 45px;
+                height: 65px;
+                font-size: 16px;
+            }
 
-    h1 {
-        font-size: 18px;
-    }
+            .inline-card-img {
+                width: 45px;
+            }
+        }
 
-    .top-bar {
-        padding: 8px;
-        font-size: 12px;
-    }
+        /* Mobile phones */
+        @media (max-width: 550px) {
+            body {
+                overflow-x: hidden;
+            }
 
-    .table-outer {
-        transform: scale(0.55);
-        transform-origin: top center;
-    }
+            h1 {
+                font-size: 18px;
+            }
 
-    .panel-row, .bottom-panel, .stats-wrapper {
-        flex-direction: column;
-        align-items: center;
-    }
+            .top-bar {
+                padding: 8px;
+                font-size: 12px;
+            }
 
-    .panel, .player-panel {
-        width: 95%;
-        font-size: 11px;
-        padding: 8px;
-    }
+            .table-outer {
+                transform: scale(0.55);
+                transform-origin: top center;
+            }
 
-    table {
-        width: 95%;
-        font-size: 11px;
-    }
+            .panel-row, .bottom-panel, .stats-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
 
-    .seat {
-        width: 90px;
-        font-size: 10px;
-        padding: 3px;
-    }
+            .panel, .player-panel {
+                width: 95%;
+                font-size: 11px;
+                padding: 8px;
+            }
 
-    .board-card {
-        width: 40px;
-        height: 55px;
-        font-size: 15px;
-    }
-}
+            table {
+                width: 95%;
+                font-size: 11px;
+            }
 
+            .seat {
+                width: 90px;
+                font-size: 10px;
+                padding: 3px;
+            }
+
+            .board-card {
+                width: 40px;
+                height: 55px;
+                font-size: 15px;
+            }
+
+            .inline-card-img {
+                width: 40px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -363,7 +395,7 @@
         <input type="text" id="river-input" placeholder="3c" />
         <button id="start-hand-btn">Start Hand</button>
         <button id="reset-btn">Reset Hand</button>
-	<button id="hard-reset-btn">Hard Reset</button>
+        <button id="hard-reset-btn">Hard Reset</button>
         <button id="download-csv-btn">Download CSV</button>
         <button id="update-board-btn">Update Board</button>
 
@@ -475,38 +507,33 @@
 
     <script>
         const socket = io();
-// -------- Dynamic table scaling based on viewport & device pixel ratio --------
-const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
 
-function updateTableScale() {
-    const table = document.querySelector(".table-outer");
-    if (!table) return;
+        // -------- Dynamic table scaling based on viewport & device pixel ratio --------
+        const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
 
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-    const dpr = window.devicePixelRatio || 1;
+        function updateTableScale() {
+            const table = document.querySelector(".table-outer");
+            if (!table) return;
 
-    // We allow the table to take up to ~95% of the viewport width
-    const usableWidth = viewportWidth * 0.95;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
 
-    // Base scale relative to the original 700px width
-    let scale = usableWidth / TABLE_BASE_WIDTH;
+            const usableWidth = viewportWidth * 0.95;
+            let scale = usableWidth / TABLE_BASE_WIDTH;
 
-    // Never upscale above 1 (keep original size on large screens)
-    if (scale > 1) scale = 1;
+            if (scale > 1) scale = 1;
 
-    // On very high DPI screens, bump scale a little so it does not feel tiny
-    if (dpr >= 2) {
-        scale *= 1.05;
-        if (scale > 1) scale = 1;
-    }
+            if (dpr >= 2) {
+                scale *= 1.05;
+                if (scale > 1) scale = 1;
+            }
 
-    table.style.transform = `scale(${scale})`;
-    table.style.transformOrigin = "top center";
-}
+            table.style.transform = `scale(${scale})`;
+            table.style.transformOrigin = "top center";
+        }
 
-// Run on load and on resize
-window.addEventListener("load", updateTableScale);
-window.addEventListener("resize", updateTableScale);
+        window.addEventListener("load", updateTableScale);
+        window.addEventListener("resize", updateTableScale);
 
         let heroMode = "auto";
         let lastHeroDecision = null;
@@ -551,6 +578,7 @@ window.addEventListener("resize", updateTableScale);
             socket.emit("hero_kick", { seat: seatVal });
         });
 
+        // Old pretty text (kept, but no longer used for rendering)
         function prettyCard(card) {
             if (!card || card.length < 2) return card || "";
             const rank = card[0];
@@ -563,6 +591,18 @@ window.addEventListener("resize", updateTableScale);
 
         function prettyCardList(cards) {
             return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
+        }
+
+        // New image-based helpers
+        function cardImgHTML(card) {
+            if (!card || card.length < 2) return "";
+            const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
+            if (safe.length !== 2) return "";
+            return `<img src="/static/cards_renamed/${safe}.png" class="inline-card-img">`;
+        }
+
+        function cardImgListHTML(cards) {
+            return (cards || []).map(c => cardImgHTML(c)).join("");
         }
 
         function resetSeats() {
@@ -603,10 +643,13 @@ window.addEventListener("resize", updateTableScale);
             for (let i = 0; i < 5; i++) {
                 const el = document.getElementById("board-" + i);
                 const card = board && board[i] ? board[i] : "?";
-                if (card === "?") {
+                if (!el) continue;
+
+                if (!card || card === "?") {
                     el.textContent = "?";
                 } else {
-                    el.innerHTML = prettyCard(card);
+                    const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
+                    el.innerHTML = `<img src="/static/cards_renamed/${safe}.png" class="board-card-img">`;
                 }
             }
         }
@@ -661,39 +704,38 @@ window.addEventListener("resize", updateTableScale);
         });
 
         // Soft reset: clear current hand, keep players and stats
-document.getElementById("reset-btn").addEventListener("click", () => {
-    socket.emit("hero_soft_reset");
-    updateBoard([]);
-    document.getElementById("pot-text").textContent = "0";
-    document.getElementById("street-text").textContent = "-";
-    document.getElementById("hero-hand-cards").textContent = "–";
-    document.getElementById("ai-action").textContent = "–";
-    document.getElementById("ai-amount").textContent = "–";
-    document.getElementById("ai-reason").textContent = "–";
-    document.getElementById("last-result-board").textContent = "Board: –";
-    document.getElementById("last-result-note").textContent = "Note: –";
-    document.getElementById("last-result-list").innerHTML = "";
-    // NOTE: we do NOT call resetSeats() or clear stats here
-});
+        document.getElementById("reset-btn").addEventListener("click", () => {
+            socket.emit("hero_soft_reset");
+            updateBoard([]);
+            document.getElementById("pot-text").textContent = "0";
+            document.getElementById("street-text").textContent = "-";
+            document.getElementById("hero-hand-cards").textContent = "–";
+            document.getElementById("ai-action").textContent = "–";
+            document.getElementById("ai-amount").textContent = "–";
+            document.getElementById("ai-reason").textContent = "–";
+            document.getElementById("last-result-board").textContent = "Board: –";
+            document.getElementById("last-result-note").textContent = "Note: –";
+            document.getElementById("last-result-list").innerHTML = "";
+        });
 
-// Hard reset: full table wipe, remove players and stats
-document.getElementById("hard-reset-btn").addEventListener("click", () => {
-    if (!confirm("Hard reset will remove all players from the table. Continue?")) return;
+        // Hard reset: full table wipe, remove players and stats
+        document.getElementById("hard-reset-btn").addEventListener("click", () => {
+            if (!confirm("Hard reset will remove all players from the table. Continue?")) return;
 
-    socket.emit("reset_table");
-    updateBoard([]);
-    document.getElementById("pot-text").textContent = "0";
-    document.getElementById("street-text").textContent = "-";
-    document.getElementById("hero-hand-cards").textContent = "–";
-    document.getElementById("ai-action").textContent = "–";
-    document.getElementById("ai-amount").textContent = "–";
-    document.getElementById("ai-reason").textContent = "–";
-    document.getElementById("last-result-board").textContent = "Board: –";
-    document.getElementById("last-result-note").textContent = "Note: –";
-    document.getElementById("last-result-list").innerHTML = "";
-    resetSeats();
-    document.getElementById("player-stats-body").innerHTML = "";
-});
+            socket.emit("reset_table");
+            updateBoard([]);
+            document.getElementById("pot-text").textContent = "0";
+            document.getElementById("street-text").textContent = "-";
+            document.getElementById("hero-hand-cards").textContent = "–";
+            document.getElementById("ai-action").textContent = "–";
+            document.getElementById("ai-amount").textContent = "–";
+            document.getElementById("ai-reason").textContent = "–";
+            document.getElementById("last-result-board").textContent = "Board: –";
+            document.getElementById("last-result-note").textContent = "Note: –";
+            document.getElementById("last-result-list").innerHTML = "";
+            resetSeats();
+            document.getElementById("player-stats-body").innerHTML = "";
+        });
 
         document.getElementById("download-csv-btn").addEventListener("click", () => {
             window.location.href = "/download_csv";
@@ -730,7 +772,7 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
 
         socket.on("hero_hole_cards", data => {
             const cards = data.cards || [];
-            document.getElementById("hero-hand-cards").innerHTML = prettyCardList(cards);
+            document.getElementById("hero-hand-cards").innerHTML = cardImgListHTML(cards);
         });
 
         socket.on("hero_decision", data => {
@@ -754,18 +796,18 @@ document.getElementById("hard-reset-btn").addEventListener("click", () => {
             const players = data.players || [];
             const note = data.note || "";
 
-            const boardPretty = board.map(prettyCard).join(" ");
+            const boardPretty = cardImgListHTML(board);
             document.getElementById("last-result-board").innerHTML = "Board: " + boardPretty;
             document.getElementById("last-result-note").textContent = "Note: " + note;
 
             const ul = document.getElementById("last-result-list");
             ul.innerHTML = "";
             players.forEach(p => {
-                const cardsPretty = prettyCardList(p.hole_cards || []);
+                const cardsPretty = cardImgListHTML(p.hole_cards || []);
                 const winnerTag = p.winner ? "<strong> (WINNER)</strong>" : "";
                 const foldedTag = p.folded ? "(folded)" : "";
                 const bestFive = p.best_five || [];
-                const bestPretty = bestFive.length ? prettyCardList(bestFive) : "";
+                const bestPretty = bestFive.length ? cardImgListHTML(bestFive) : "";
                 const bestTag = p.winner && bestPretty ? ` – Best 5: ${bestPretty}` : "";
                 const li = document.createElement("li");
                 li.innerHTML = `Seat ${p.seat} – ${p.name}: ${cardsPretty} ${foldedTag} ${winnerTag}${bestTag}`;
