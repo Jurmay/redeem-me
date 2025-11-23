@@ -398,10 +398,7 @@
         <button id="hard-reset-btn">Hard Reset</button>
         <button id="download-csv-btn">Download CSV</button>
         <button id="update-board-btn">Update Board</button>
-	<button id="voice-toggle-btn" style="background:#444; color:#fff; margin-left:10px;">
-    	Voice: OFF
-	</button>
-
+	<button id="voice-toggle-btn">Voice: ON</button>
 
         <span class="mode-pill">
             Mode:
@@ -521,6 +518,8 @@ function speak(text) {
 }
 
         const socket = io();
+
+let voiceEnabled = true;
 
         // -------- Dynamic table scaling based on viewport & device pixel ratio --------
         const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
@@ -799,6 +798,7 @@ function speak(text) {
                 setModeButtons(data.mode);
     const actionText = data.action || "";
     const amountText = data.amount ? ` for ${data.amount} chips` : "";
+if (voiceEnabled) {
     speak(`AI suggests ${actionText}${amountText}. ${data.reason || ""}`);
 
             }
@@ -860,6 +860,13 @@ function speak(text) {
             }
             sendHeroAction("RAISE", amt);
         });
+document.getElementById("voice-toggle-btn").addEventListener("click", () => {
+    voiceEnabled = !voiceEnabled;
+
+    document.getElementById("voice-toggle-btn").textContent =
+        voiceEnabled ? "Voice: ON" : "Voice: OFF";
+});
+
     </script>
 </body>
 </html>
