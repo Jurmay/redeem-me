@@ -139,26 +139,27 @@
             display: flex;
             gap: 8px;
         }
-        .board-card {
-            /* container for PNG */
-            width: auto;
-            height: auto;
-            padding: 0;
-            border: none;
-            background: none;
-            box-shadow: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        /* PNG card face */
-        .board-card-img {
-            width: 60px;
-            height: auto;
-            display: block;
-            border-radius: 6px;
-            box-shadow: 0 0 8px rgba(0,0,0,0.7);
-        }
+      .board-card {
+    /* The card is now just a container for the PNG */
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Actual PNG card face */
+.board-card-img {
+    width: 60px;        /* adjust if you want bigger/smaller cards */
+    height: auto;
+    display: block;
+    border-radius: 6px; /* optional – keep or remove */
+    box-shadow: 0 0 8px rgba(0,0,0,0.7);  /* optional glow around PNG */
+}
 
         .center-info {
             position: absolute;
@@ -169,14 +170,20 @@
             font-size: 12px;
         }
 
-        /* Small cards in text areas */
-        .inline-card-img {
-            width: 36px;
-            height: auto;
-            margin-right: 4px;
-            vertical-align: middle;
-            display: inline-block;
+        /* Card images */
+        .board-card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
+       .inline-card-img {
+   	 width: 36px;      /* size for small cards in text areas */
+    	height: auto;
+    	margin-right: 4px;
+   	 vertical-align: middle;
+    	display: inline-block;
+}
+
 
         .card-rank {
             font-size: 20px;
@@ -267,6 +274,7 @@
            RESPONSIVE ADJUSTMENTS
            ============================ */
 
+        /* Large tablets and small laptops */
         @media (max-width: 1100px) {
             .table-outer {
                 transform: scale(0.85);
@@ -287,6 +295,7 @@
             }
         }
 
+        /* Tablets */
         @media (max-width: 800px) {
             h1 {
                 font-size: 20px;
@@ -308,8 +317,10 @@
                 padding: 4px;
             }
 
-            .board-card-img {
+            .board-card {
                 width: 45px;
+                height: 65px;
+                font-size: 16px;
             }
 
             .inline-card-img {
@@ -317,6 +328,7 @@
             }
         }
 
+        /* Mobile phones */
         @media (max-width: 550px) {
             body {
                 overflow-x: hidden;
@@ -358,8 +370,10 @@
                 padding: 3px;
             }
 
-            .board-card-img {
+            .board-card {
                 width: 40px;
+                height: 55px;
+                font-size: 15px;
             }
 
             .inline-card-img {
@@ -384,6 +398,7 @@
         <button id="hard-reset-btn">Hard Reset</button>
         <button id="download-csv-btn">Download CSV</button>
         <button id="update-board-btn">Update Board</button>
+	<button id="voice-toggle-btn">Voice: ON</button>
 
         <span class="mode-pill">
             Mode:
@@ -395,12 +410,6 @@
             Kick seat:
             <input type="number" id="kick-seat-input" min="1" max="6" style="width:40px; padding:2px 4px; font-size:12px;" />
             <button id="kick-btn">Kick</button>
-        </span>
-
-        <!-- NEW: voice toggle pill -->
-        <span class="mode-pill">
-            Voice:
-            <button id="voice-toggle-btn" class="mode-btn inactive">Off</button>
         </span>
     </div>
 
@@ -498,10 +507,22 @@
     </div>
 
     <script>
+
+function speak(text) {
+    if (!("speechSynthesis" in window)) return;  // no support
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.rate = 1.0;   // speed
+    msg.pitch = 1.0;  // tone
+    window.speechSynthesis.cancel();             // stop previous
+    window.speechSynthesis.speak(msg);
+}
+
         const socket = io();
 
-        // -------- Dynamic table scaling --------
-        const TABLE_BASE_WIDTH = 700;
+let voiceEnabled = true;
+
+        // -------- Dynamic table scaling based on viewport & device pixel ratio --------
+        const TABLE_BASE_WIDTH = 700;  // original design width in CSS pixels
 
         function updateTableScale() {
             const table = document.querySelector(".table-outer");
@@ -514,6 +535,7 @@
             let scale = usableWidth / TABLE_BASE_WIDTH;
 
             if (scale > 1) scale = 1;
+
             if (dpr >= 2) {
                 scale *= 1.05;
                 if (scale > 1) scale = 1;
@@ -539,42 +561,6 @@
 
         const kickSeatInput = document.getElementById("kick-seat-input");
         const kickBtn       = document.getElementById("kick-btn");
-
-        // --- NEW: voice state + helpers ---
-        const voiceToggleBtn = document.getElementById("voice-toggle-btn");
-        let voiceEnabled = false;
-
-        function setVoiceUI() {
-            if (voiceEnabled) {
-                voiceToggleBtn.classList.add("active");
-                voiceToggleBtn.classList.remove("inactive");
-                voiceToggleBtn.textContent = "On";
-            } else {
-                voiceToggleBtn.classList.remove("active");
-                voiceToggleBtn.classList.add("inactive");
-                voiceToggleBtn.textContent = "Off";
-            }
-        }
-
-        function speak(text) {
-            if (!voiceEnabled) return;
-            if (!("speechSynthesis" in window)) return;
-            if (!text) return;
-
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.rate  = 1.0;
-            utter.pitch = 1.0;
-            window.speechSynthesis.speak(utter);
-        }
-
-        voiceToggleBtn.addEventListener("click", () => {
-            voiceEnabled = !voiceEnabled;
-            setVoiceUI();
-        });
-        // initialise visual state
-        setVoiceUI();
-        // --- END voice block ---
 
         function setModeButtons(mode) {
             heroMode = mode;
@@ -605,7 +591,7 @@
             socket.emit("hero_kick", { seat: seatVal });
         });
 
-        // Text-based card (kept but unused)
+        // Old pretty text (kept, but no longer used for rendering)
         function prettyCard(card) {
             if (!card || card.length < 2) return card || "";
             const rank = card[0];
@@ -620,7 +606,7 @@
             return (cards || []).map(prettyCard).join("&nbsp;&nbsp;");
         }
 
-        // PNG helpers
+        // New image-based helpers
         function cardImgHTML(card) {
             if (!card || card.length < 2) return "";
             const safe = card.replace(/[^2-9TJQKAcdhs]/g, "");
@@ -730,7 +716,7 @@
             });
         });
 
-        // Soft reset
+        // Soft reset: clear current hand, keep players and stats
         document.getElementById("reset-btn").addEventListener("click", () => {
             socket.emit("hero_soft_reset");
             updateBoard([]);
@@ -745,7 +731,7 @@
             document.getElementById("last-result-list").innerHTML = "";
         });
 
-        // Hard reset
+        // Hard reset: full table wipe, remove players and stats
         document.getElementById("hard-reset-btn").addEventListener("click", () => {
             if (!confirm("Hard reset will remove all players from the table. Continue?")) return;
 
@@ -808,29 +794,14 @@
             document.getElementById("ai-amount").textContent = data.amount ?? "–";
             document.getElementById("ai-reason").textContent = data.reason || "-";
 
-            // keep mode in sync
             if (data && data.mode) {
                 setModeButtons(data.mode);
-            }
+    const actionText = data.action || "";
+    const amountText = data.amount ? ` for ${data.amount} chips` : "";
+if (voiceEnabled) {
+    speak(`AI suggests ${actionText}${amountText}. ${data.reason || ""}`);
 
-            // --- NEW: speak the decision if voice is ON ---
-            let actionWord = "";
-            switch ((data.action || "").toUpperCase()) {
-                case "FOLD":  actionWord = "fold"; break;
-                case "CHECK": actionWord = "check"; break;
-                case "CALL":  actionWord = "call"; break;
-                case "RAISE": actionWord = "raise"; break;
-                default:      actionWord = data.action || ""; break;
             }
-            const amt = data.amount || 0;
-            const amountPart = amt > 0 ? ` with ${amt} chips` : "";
-            const reasonPart = data.reason ? `. ${data.reason}` : "";
-            const textToSpeak = actionWord
-                ? `AI suggests ${actionWord}${amountPart}${reasonPart}`
-                : "";
-
-            speak(textToSpeak);
-            // --- END voice speak block ---
         });
 
         socket.on("hero_mode", data => {
@@ -889,6 +860,13 @@
             }
             sendHeroAction("RAISE", amt);
         });
+document.getElementById("voice-toggle-btn").addEventListener("click", () => {
+    voiceEnabled = !voiceEnabled;
+
+    document.getElementById("voice-toggle-btn").textContent =
+        voiceEnabled ? "Voice: ON" : "Voice: OFF";
+});
+
     </script>
 </body>
 </html>
